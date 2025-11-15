@@ -61,6 +61,9 @@ class PlayCard(Action):
     def __hash__(self):
         return hash(('PlayCard', self.card_index))
 
+    def key(self):
+        return ('PlayCard', self.card_index)
+
 class NoAction(Action):
     def play(self, by: Agent, game_state: GameState, battle_state: BattleState) -> None:
         pass
@@ -77,3 +80,6 @@ class EndAgentTurn(Action):
 
     def __hash__(self):
         return hash('EndAgentTurn')
+
+    def key(self):
+        return 'EndAgentTurn'

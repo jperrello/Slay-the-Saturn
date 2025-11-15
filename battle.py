@@ -208,6 +208,43 @@ class BattleState:
         self._play_side([enemy for enemy in self.enemies], [self.player])
         self.discard_hand()
 
+    def step(self, action: Action) -> None:
+        """
+        Apply an action to the battle state.
+        Used by MCTS and other search algorithms.
+        """
+        from action.action import PlayCard, EndAgentTurn
+
+        if self.ended():
+            return
+
+        # Apply the action
+        if isinstance(action, PlayCard):
+            if action.card_index < len(self.hand) and self.hand[action.card_index].is_playable(self.game_state, self):
+                self.play_card(action.card_index)
+        elif isinstance(action, EndAgentTurn):
+            # End player turn and simulate enemy turns
+            self.agent_turn_ended = True
+            # Clean up player turn
+            other_side: list[Agent] = [enemy for enemy in self.enemies]
+            BattleState.side_turn_event.broadcast_after((self.player, self.game_state, self, other_side))
+            self.player.status_effect_state.end_turn()
+            for enemy in self.enemies:
+                enemy.clear_block()
+            # Discard hand
+            self.discard_hand()
+            # Enemy turn
+            self._play_side([enemy for enemy in self.enemies], [self.player])
+            # Start new turn
+            self.mana = self.game_state.max_mana
+            self.turn += 1
+            self.turn_phase = 0
+            self.draw_hand()
+            self.agent_turn_ended = False
+
+        # Remove dead enemies
+        self.enemies: list[Enemy] = [enemy for enemy in self.enemies if not enemy.is_dead()]
+
     def tick_player(self, action: Action) -> bool:
         if self.ended():
             return False
