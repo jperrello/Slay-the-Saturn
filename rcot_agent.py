@@ -67,6 +67,9 @@ class RCotAgent(GGPA):
     def __init__(self, config: Optional[RCotConfig] = None):
         self.config = config or RCotConfig()
         super().__init__(f"RCoT-{self.config.model.replace('gpt-', '')}")
+
+        import dotenv
+        dotenv.load_dotenv()
         
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
