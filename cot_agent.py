@@ -1,18 +1,12 @@
 from __future__ import annotations
 import re
 from openai import OpenAI
-import time
-import json
 import os
-from enum import StrEnum
 from ggpa.ggpa import GGPA
 from action.action import EndAgentTurn, PlayCard
 from auth import GPT_AUTH
-from utility import get_unique_filename
-from ggpa.prompt2 import PromptOption, get_action_prompt,\
-    get_agent_target_prompt, get_card_target_prompt,\
-    strip_response, _get_game_context
-from typing import TYPE_CHECKING, Any
+from ggpa.prompt2 import get_agent_target_prompt, get_card_target_prompt
+from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from game import GameState
     from battle import BattleState
@@ -35,9 +29,7 @@ class CotAgent(GGPA):
             self.client = OpenAI(api_key=api_key) 
             
         except Exception as e:
-            print("\nAPI KEY ERROR")
-            print(f"ERROR TYPE: {type(e)}")
-            print(f"ERROR DETAILS: {e}")
+            print(f"\nAPI KEY ERROR: {type(e)}, {e}")
             raise
 
         self.system_prompt = (
@@ -67,13 +59,13 @@ class CotAgent(GGPA):
             try:
                 index = int(re.findall(r'\d+', content)[0])
                 if 0 <= index < len(agent_list):
-                    print(f"AGENT CHOSE TARGET: {index}")
+                    print(f"AGENT TARGET: {index}")
                     return agent_list[index]
             except (ValueError, IndexError):
-                print(f"ERROR IN CHOOSE AGENT TARGET")
+                print(f"ERROR IN CHOOSING AGENT TARGET")
                 pass
         
-        print("AGENT TARGET FALLBACK TO SMALLEST HP")
+        print("ERROR & FALLBACK: AGENT TARGET IS SMALLEST HP")
         return min(agent_list, key=lambda a: a.health)
 
     def choose_card_target(self, battle_state: BattleState, list_name: str, 
@@ -128,11 +120,12 @@ class CotAgent(GGPA):
             #     "You are an expert card game strategist.\n"
             #     "Analyze the game state and enemy intent.\n"
             #     "You must choose ONLY ONE action from the list.\n"
+            #     "Show your thinking step-by-step before the CARD action decision.\n"
             #     "Your response MUST end with a single line formatted EXACTLY as:\n"
             #     "Action: <index>\n\n"
             #     "Ex:\n"
-            #     "The enemy is attacking. I play Defend to block.\n"
-            #     "Action: 2"
+            #     "The enemy is attacking. I play Shield to block.\n"
+            #     "CARD: 2"
             # )
 
             options: list[Action] = self.get_choose_card_options(game_state, battle_state)
@@ -170,7 +163,7 @@ class CotAgent(GGPA):
             
             # fall back
             if action_index is None:
-                print("Could not find Action: <index> in response. FALLBACK to END TURN")
+                print("No Action: <index> in response -> FALLBACK to END TURN")
                 return options[-1]
             
             if 0 <= action_index < len(options):
@@ -178,12 +171,12 @@ class CotAgent(GGPA):
                 print(f"AGENT CHOSE: {action_index}: {action_chosen.__class__.__name__}")
                 return action_chosen
             else:
-                print(f"PARSE ERROR: Index {action_index} is out of range (range: 0-{len(options)-1}). FALL BACK TO END TURN")
+                print(f"Index {action_index} is out of range (range: 0-{len(options)-1}). END TURN")
                 return options[-1]
         
     def _api_call(self, prompt: str):
         try:
-            #print(f"PROMPT: \n{prompt}\n")
+            #print(f"PROMPT: \n{prompt}\n") # prints prompt
 
             response = self.client.chat.completions.create(
                 model="gpt-4o",
