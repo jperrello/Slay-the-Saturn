@@ -3,7 +3,7 @@ from config import Character, Verbose
 from game import GameState
 from battle import BattleState
 from agent import JawWorm
-from cot_agent import CotAgent
+from g3_files.agents.cot_agent import CotAgent
 from card import *
 import dotenv
 
