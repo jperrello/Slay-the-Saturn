@@ -1,10 +1,9 @@
 from __future__ import annotations
 import re
 from openai import OpenAI
-import os
 from ggpa.ggpa import GGPA
 from action.action import EndAgentTurn, PlayCard
-from auth import GPT_AUTH
+from auth import OPENROUTER_API_KEY
 from ggpa.prompt2 import get_agent_target_prompt, get_card_target_prompt
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -14,23 +13,32 @@ if TYPE_CHECKING:
     from card import Card
     from action.action import Action
 
+# From Joey: I added shortnames so the testing file worked and I just made this openrouter instead of openai because I had a key with credits I coulld test with
+# Sry for not asking Reva, I can switch back if you want
+
 class CotAgent(GGPA):
-    API_KEY = GPT_AUTH
-    tokens = 500
 
-    def __init__(self) -> None:
-        super().__init__(name="CotAgent")
+    def __init__(self, model_name: str = "openai/gpt-4.1") -> None:
+        self.model_name = model_name
 
-        try:
-            api_key = os.getenv("OPENAI_API_KEY")
-            if not api_key:
-                raise ValueError("OPNAI_API_KEY env var not set")
-            
-            self.client = OpenAI(api_key=api_key) 
-            
-        except Exception as e:
-            print(f"\nAPI KEY ERROR: {type(e)}, {e}")
-            raise
+        # Determine short name for testing
+        model_short_names = {
+            "openai/gpt-4.1": "gpt41",
+            "openrouter/auto": "or-auto",
+            "anthropic/claude-sonnet-4.5": "claude",
+            "google/gemini-3-pro-preview": "gemini",
+            "meta-llama/llama-3.3-70b-instruct:free": "llama-free",
+            "qwen/qwen3-4b:free": "qwen-free",
+            "nvidia/nemotron-nano-9b-v2:free": "nemotron-free",
+            "openai/gpt-oss-20b:free": "gpt-oss-free",
+            "tngtech/deepseek-r1t2-chimera:free": "deepseek-free",
+        }
+        short_name = model_short_names.get(model_name, model_name.replace("/", "-").replace(":", "-"))
+
+        super().__init__(name=f"CoT-{short_name}")
+
+        # All models use OpenRouter API so we can have lazy initialization for pickling during testing
+        self._client = None
 
         self.system_prompt = (
             "You are an expert card game strategist.\n"
@@ -44,6 +52,19 @@ class CotAgent(GGPA):
             "The enemy is attacking. I play Defend to block.\n"
             "CARD: 2"
         )
+
+    @property
+    def client(self):
+        if self._client is None:
+            try:
+                self._client = OpenAI(
+                    base_url="https://openrouter.ai/api/v1",
+                    api_key=OPENROUTER_API_KEY,
+                )
+            except Exception as e:
+                print(f"\nAPI KEY ERROR: {type(e)}, {e}")
+                raise
+        return self._client
 
     def choose_agent_target(self, battle_state: BattleState, list_name: str, 
                             agent_list: list[Agent]) -> Agent:
@@ -179,12 +200,12 @@ class CotAgent(GGPA):
             #print(f"PROMPT: \n{prompt}\n") # prints prompt
 
             response = self.client.chat.completions.create(
-                model="gpt-4o",
+                model=self.model_name,
                 messages=[
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": prompt}
                 ]
-            )            
+            )
             return response
 
         except Exception as e:

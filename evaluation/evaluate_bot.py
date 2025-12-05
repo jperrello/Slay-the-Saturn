@@ -20,17 +20,15 @@ from ggpa.random_bot import RandomBot
 from ggpa.backtrack import BacktrackBot
 from ggpa.chatgpt_bot import ChatGPTBot
 from ggpa.prompt2 import PromptOption
-from ggpa.none_agent import NoneAgent
 from ggpa.basic_agent import BasicAgent
-from g3_files.agents.llm_bot import SimpleLLMBot
 from g3_files.agents.mcts_bot import MCTSAgent
 from g3_files.agents.rcot_agent import RCotAgent, RCotConfig
 from g3_files.agents.cot_agent import CotAgent
 
 def name_to_bot(name: str, limit_share: float) -> GGPA:
-    # Baseline agents: NoneAgent and BasicAgent
-    if name == 'none':
-        return NoneAgent()
+    # Baseline agents: RandomBot and BasicAgent
+    if name == 'rndm':
+        return RandomBot()
     if name == 'basic':
         return BasicAgent()
 
@@ -41,39 +39,53 @@ def name_to_bot(name: str, limit_share: float) -> GGPA:
         iterations = int(name.split('-')[-1])
         return MCTSAgent(iterations=iterations)
 
-    # RCoT agents (Reflective Chain-of-Thought)
-    if name == 'rcot-cot':
-        return RCotAgent(RCotConfig(prompt_option="cot"))
-    if name == 'rcot-none':
-        return RCotAgent(RCotConfig(prompt_option="none"))
-    if name == 'rcot-rcot':
-        return RCotAgent(RCotConfig(prompt_option="rcot"))
+    # RCoT agents (Reverse Chain-of-Thought with various LLM models)
+    if name == 'rcot':
+        return RCotAgent(RCotConfig(prompt_option="rcot"))  # Default: openrouter/auto
+    if name == 'rcot-gpt41':
+        return RCotAgent(RCotConfig(model="openai/gpt-4.1", prompt_option="rcot"))
+    if name == 'rcot-openrouter-auto':
+        return RCotAgent(RCotConfig(model="openrouter/auto", prompt_option="rcot"))
+    if name == 'rcot-claude':
+        return RCotAgent(RCotConfig(model="anthropic/claude-sonnet-4.5", prompt_option="rcot"))
+    if name == 'rcot-gemini':
+        return RCotAgent(RCotConfig(model="google/gemini-3-pro-preview", prompt_option="rcot"))
 
-    # CoT agent (Chain-of-Thought)
+    # RCoT agents (Free models)
+    if name == 'rcot-llama-free':
+        return RCotAgent(RCotConfig(model="meta-llama/llama-3.3-70b-instruct:free", prompt_option="rcot"))
+    if name == 'rcot-qwen-free':
+        return RCotAgent(RCotConfig(model="qwen/qwen3-4b:free", prompt_option="rcot"))
+    if name == 'rcot-nemotron-free':
+        return RCotAgent(RCotConfig(model="nvidia/nemotron-nano-9b-v2:free", prompt_option="rcot"))
+    if name == 'rcot-gpt-oss-free':
+        return RCotAgent(RCotConfig(model="openai/gpt-oss-20b:free", prompt_option="rcot"))
+    if name == 'rcot-deepseek-free':
+        return RCotAgent(RCotConfig(model="tngtech/deepseek-r1t2-chimera:free", prompt_option="rcot"))
+
+    # CoT agents (Chain-of-Thought via OpenRouter with various LLM models)
     if name == 'cot':
-        return CotAgent()
+        return CotAgent()  # Default: openai/gpt-4.1
+    if name == 'cot-gpt41':
+        return CotAgent(model_name="openai/gpt-4.1")
+    if name == 'cot-openrouter-auto':
+        return CotAgent(model_name="openrouter/auto")
+    if name == 'cot-claude':
+        return CotAgent(model_name="anthropic/claude-sonnet-4.5")
+    if name == 'cot-gemini':
+        return CotAgent(model_name="google/gemini-3-pro-preview")
 
-    # LLM agents with direct OpenRouter API calls (Premium)
-    if name == 'llm-openrouter-auto':
-        return SimpleLLMBot(SimpleLLMBot.ModelName.OPENROUTER_AUTO, PromptOption.CoT, 0, False)
-    if name == 'llm-gpt4o':
-        return SimpleLLMBot(SimpleLLMBot.ModelName.GPT_4o, PromptOption.CoT, 0, False)
-    if name == 'llm-claude':
-        return SimpleLLMBot(SimpleLLMBot.ModelName.CLAUDE_35_SONNET, PromptOption.CoT, 0, False)
-    if name == 'llm-gemini':
-        return SimpleLLMBot(SimpleLLMBot.ModelName.GEMINI_PRO_15, PromptOption.CoT, 0, False)
-
-    # LLM agents (Free models)
-    if name == 'llm-llama-free':
-        return SimpleLLMBot(SimpleLLMBot.ModelName.LLAMA_33_70B_FREE, PromptOption.CoT, 0, False)
-    if name == 'llm-qwen-free':
-        return SimpleLLMBot(SimpleLLMBot.ModelName.QWEN3_235B_FREE, PromptOption.CoT, 0, False)
-    if name == 'llm-nemotron-free':
-        return SimpleLLMBot(SimpleLLMBot.ModelName.NEMOTRON_NANO_FREE, PromptOption.CoT, 0, False)
-    if name == 'llm-gpt-oss-free':
-        return SimpleLLMBot(SimpleLLMBot.ModelName.GPT_OSS_20B_FREE, PromptOption.CoT, 0, False)
-    if name == 'llm-deepseek-free':
-        return SimpleLLMBot(SimpleLLMBot.ModelName.DEEPSEEK_R1T2_FREE, PromptOption.CoT, 0, False)
+    # CoT agents (Free models)
+    if name == 'cot-llama-free':
+        return CotAgent(model_name="meta-llama/llama-3.3-70b-instruct:free")
+    if name == 'cot-qwen-free':
+        return CotAgent(model_name="qwen/qwen3-4b:free")
+    if name == 'cot-nemotron-free':
+        return CotAgent(model_name="nvidia/nemotron-nano-9b-v2:free")
+    if name == 'cot-gpt-oss-free':
+        return CotAgent(model_name="openai/gpt-oss-20b:free")
+    if name == 'cot-deepseek-free':
+        return CotAgent(model_name="tngtech/deepseek-r1t2-chimera:free")
 
     if name == 'r':
         return RandomBot()

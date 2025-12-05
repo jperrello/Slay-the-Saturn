@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Optional
 from dataclasses import dataclass, field
 
 from openai import OpenAI
+import os
 from ggpa.ggpa import GGPA
 from ggpa.prompt2 import get_agent_target_prompt, get_card_target_prompt
 from action.action import EndAgentTurn, PlayCard
@@ -24,7 +25,7 @@ class RCotConfig:
     max_tokens: int = 500
     anonymize_cards: bool = True
     retry_limit: int = 3
-    prompt_option: str = "cot"
+    prompt_option: str = "rcot"
 
 
 @dataclass
@@ -47,16 +48,41 @@ class RCotAgent(GGPA):
 
     def __init__(self, config: Optional[RCotConfig] = None):
         self.config = config or RCotConfig()
-        super().__init__(f"RCoT-{self.config.prompt_option}")
 
-        print(f"[RCoT] Initializing OpenRouter API client...")
-        self.client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=OPENROUTER_API_KEY,
-        )
+        # Determine short name for agent identification
+        model_short_names = {
+            "openai/gpt-4.1": "gpt41",
+            "openrouter/auto": "or-auto",
+            "anthropic/claude-sonnet-4.5": "claude",
+            "google/gemini-3-pro-preview": "gemini",
+            "meta-llama/llama-3.3-70b-instruct:free": "llama-free",
+            "qwen/qwen3-4b:free": "qwen-free",
+            "nvidia/nemotron-nano-9b-v2:free": "nemotron-free",
+            "openai/gpt-oss-20b:free": "gpt-oss-free",
+            "tngtech/deepseek-r1t2-chimera:free": "deepseek-free",
+        }
+        short_name = model_short_names.get(self.config.model, self.config.model.replace("/", "-").replace(":", "-"))
+
+        super().__init__(f"RCoT-{short_name}")
+
+        # All models use OpenRouter API - lazy initialization for pickling
+        self._client = None
 
         self.stats = RCotStatistics()
         self.card_anonymization_map = {}
+
+    @property
+    def client(self):
+        if self._client is None:
+            try:
+                self._client = OpenAI(
+                    base_url="https://openrouter.ai/api/v1",
+                    api_key=OPENROUTER_API_KEY,
+                )
+            except Exception as e:
+                print(f"\nAPI KEY ERROR: {type(e)}, {e}")
+                raise
+        return self._client
 
     def _anonymize_card_name(self, card_name: str) -> str:
         if not self.config.anonymize_cards:
@@ -130,16 +156,12 @@ class RCotAgent(GGPA):
     def _build_request(self, num_options: int) -> str:
         lines = ["\n=== DECISION ==="]
 
-        if self.config.prompt_option == "none":
-            lines.append(f"respond with only the index (0-{num_options-1}) of the best option.")
+        # RCotAgent only supports "rcot" prompt option (reverse CoT)
+        if self.config.prompt_option != "rcot":
+            raise ValueError(f"RCotAgent only supports prompt_option='rcot', got '{self.config.prompt_option}'")
 
-        elif self.config.prompt_option == "cot":
-            lines.append("in the first paragraph, explain which move you think is best and why.")
-            lines.append(f"in the second paragraph, write only the index (0-{num_options-1}) of the best option.")
-
-        elif self.config.prompt_option == "rcot":
-            lines.append(f"in the first paragraph, write only the index (0-{num_options-1}) of the best option.")
-            lines.append("in the second paragraph, explain why you think this move is best.")
+        lines.append(f"in the first paragraph, write only the index (0-{num_options-1}) of the best option.")
+        lines.append("in the second paragraph, explain why you think this move is best.")
 
         return "\n".join(lines)
 
@@ -148,7 +170,8 @@ class RCotAgent(GGPA):
         if not paragraphs:
             paragraphs = [content.strip()]
 
-        target_paragraph = paragraphs[1] if self.config.prompt_option == "cot" and len(paragraphs) > 1 else paragraphs[0]
+        # For rcot, the index is in the FIRST paragraph (reverse CoT)
+        target_paragraph = paragraphs[0]
 
         words = target_paragraph.replace('.', ' ').replace(',', ' ').split()
         for word in words:

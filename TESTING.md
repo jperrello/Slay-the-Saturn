@@ -9,23 +9,27 @@ pip install pandas tqdm seaborn matplotlib joblib openai dotenv
 
 **Test Generated Cards (GIGL):**
 ```bash
-python evaluation/evaluate_card_gen.py 10 4 20 h llm-claude --gigl-dir GIGL/generated_cards --name gigl_test 
+python evaluation/evaluate_card_gen.py 10 4 20 h cot-claude --gigl-dir GIGL/generated_cards --name gigl_test
 ```
 Note: this uses money to pay for claude.
 It runs 10 sims for each 20 cards with 4 threads
 If you want to test for free:
 ```bash
-python evaluation/evaluate_card_gen.py 10 4 20 h bt5 --gigl-dir GIGL/generated_cards --name gigl_test 
+python evaluation/evaluate_card_gen.py 10 4 20 h bt5 --gigl-dir GIGL/generated_cards --name gigl_test
 ```
 
 **Default Agent Comparison Test:**
 ```bash
-python evaluation/evaluate_bot.py 50 4 0 h r bt3 cot rcot-none rcot-rcot --name agent_comparison --time 
+python evaluation/evaluate_bot.py 50 4 0 h r bt3 cot rcot --name agent_comparison --time
 ```
 
 **Plot Results:**
 ```bash
+# For bot evaluation results (group by BotName):
 python evaluation/plot_evaluation.py evaluation_results/<your_test_directory>/results.csv BotName
+
+# For card generation results (group by CardName):
+python evaluation/plot_evaluation.py evaluation_results/card_gen_<name>_enemies_<enemies>_<test_count>_<bot>/results.csv CardName
 ```
 ## How to run
 
@@ -33,10 +37,14 @@ python evaluation/plot_evaluation.py evaluation_results/<your_test_directory>/re
 - Baseline: `none`, `basic`, `r` (random)
 - Backtrack: `bt<depth>`, `bts<depth>` (e.g., `bt3`, `bts5`)
 - MCTS: `mcts`, `mcts-<iterations>` (e.g., `mcts-200`)
-- CoT: `cot` (Chain-of-Thought using GPT-4o)
-- RCoT: `rcot-cot`, `rcot-none`, `rcot-rcot`
-- LLM (premium): `llm-openrouter-auto`, `llm-gpt4o`, `llm-claude`, `llm-gemini`
-- LLM (free): `llm-llama-free`, `llm-qwen-free`, `llm-nemotron-free`, `llm-gpt-oss-free`, `llm-deepseek-free`
+- CoT (Chain-of-Thought):
+  - `cot` (default: GPT-4.1)
+  - Premium: `cot-gpt41`, `cot-openrouter-auto`, `cot-claude`, `cot-gemini`
+  - Free: `cot-llama-free`, `cot-qwen-free`, `cot-nemotron-free`, `cot-gpt-oss-free`, `cot-deepseek-free`
+- RCoT (Reverse Chain-of-Thought):
+  - `rcot` (default: OpenRouter auto-routing)
+  - Premium: `rcot-gpt41`, `rcot-openrouter-auto`, `rcot-claude`, `rcot-gemini`
+  - Free: `rcot-llama-free`, `rcot-qwen-free`, `rcot-nemotron-free`, `rcot-gpt-oss-free`, `rcot-deepseek-free`
 - Legacy GPT: `legacy-gpt-<model>-<prompt>` (e.g., `legacy-gpt-t3.5-cot`)
 
 ### Available Enemies (Global)
@@ -167,7 +175,7 @@ evaluation_results/
 
 ### Workflow 1: Test GIGL Generated Cards
 ```bash
-python evaluation/evaluate_card_gen.py 10 4 20 s llm-claude --gigl-dir GIGL/generated_cards --name gigl_test
+python evaluation/evaluate_card_gen.py 10 4 20 s cot-claude --gigl-dir GIGL/generated_cards --name gigl_test
 python evaluation/plot_evaluation.py evaluation_results/card_gen_gigl_test_*/results.csv CardName
 ```
 
