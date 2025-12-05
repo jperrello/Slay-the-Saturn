@@ -20,7 +20,7 @@ python evaluation/evaluate_card_gen.py 10 4 20 h bt5 --gigl-dir GIGL/generated_c
 
 **Default Agent Comparison Test:**
 ```bash
-python evaluation/evaluate_bot.py 50 4 0 h r bt3 cot rcot --name agent_comparison --time
+python evaluation/evaluate_bot.py 50 4 0 h r bt3 none cot rcot --name agent_comparison --time
 ```
 
 **Plot Results:**
@@ -34,7 +34,11 @@ python evaluation/plot_evaluation.py evaluation_results/card_gen_<name>_enemies_
 ## How to run
 
 ### Available Bots (All use group 3's agents and not the paper's)
-- Baseline: `none`, `basic`, `r` (random)
+- Baseline: `rndm`, `basic`, `r` (random)
+- None (Minimal prompting - PromptOption.NONE - asks LLM to pick action index without explanation):
+  - `none` (default: GPT-4.1)
+  - Premium: `none-gpt41`, `none-openrouter-auto`, `none-claude`, `none-gemini`
+  - Free: `none-llama-free`, `none-qwen-free`, `none-nemotron-free`, `none-gpt-oss-free`, `none-deepseek-free`
 - Backtrack: `bt<depth>`, `bts<depth>` (e.g., `bt3`, `bts5`)
 - MCTS: `mcts`, `mcts-<iterations>` (e.g., `mcts-200`)
 - CoT (Chain-of-Thought):

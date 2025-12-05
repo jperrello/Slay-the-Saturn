@@ -24,6 +24,7 @@ from ggpa.basic_agent import BasicAgent
 from g3_files.agents.mcts_bot import MCTSAgent
 from g3_files.agents.rcot_agent import RCotAgent, RCotConfig
 from g3_files.agents.cot_agent import CotAgent
+from g3_files.agents.none_agent import NoneAgent, NoneConfig
 
 def name_to_bot(name: str, limit_share: float) -> GGPA:
     # Baseline agents: RandomBot and BasicAgent
@@ -31,6 +32,30 @@ def name_to_bot(name: str, limit_share: float) -> GGPA:
         return RandomBot()
     if name == 'basic':
         return BasicAgent()
+
+    # None agents (Minimal prompting with PromptOption.NONE)
+    if name == 'none':
+        return NoneAgent(NoneConfig())  # Default: openai/gpt-4.1
+    if name == 'none-gpt41':
+        return NoneAgent(NoneConfig(model="openai/gpt-4.1"))
+    if name == 'none-openrouter-auto':
+        return NoneAgent(NoneConfig(model="openrouter/auto"))
+    if name == 'none-claude':
+        return NoneAgent(NoneConfig(model="anthropic/claude-sonnet-4.5"))
+    if name == 'none-gemini':
+        return NoneAgent(NoneConfig(model="google/gemini-3-pro-preview"))
+
+    # None agents (Free models)
+    if name == 'none-llama-free':
+        return NoneAgent(NoneConfig(model="meta-llama/llama-3.3-70b-instruct:free"))
+    if name == 'none-qwen-free':
+        return NoneAgent(NoneConfig(model="qwen/qwen3-4b:free"))
+    if name == 'none-nemotron-free':
+        return NoneAgent(NoneConfig(model="nvidia/nemotron-nano-9b-v2:free"))
+    if name == 'none-gpt-oss-free':
+        return NoneAgent(NoneConfig(model="openai/gpt-oss-20b:free"))
+    if name == 'none-deepseek-free':
+        return NoneAgent(NoneConfig(model="tngtech/deepseek-r1t2-chimera:free"))
 
     # MCTS agents with configurable iterations
     if name == 'mcts':
