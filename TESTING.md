@@ -28,9 +28,24 @@ python evaluation/evaluate_bot.py 50 4 0 h r bt3 none cot rcot --name agent_comp
 python evaluation/evaluate_bot.py 25 4 0 h rcot-gpt41 rcot-openrouter-auto rcot-claude rcot-gemini mcts rndm --name premium --time
 ```
 
-**Generate Statistics Table:**
+**GIGL Random Deck Test (Scenario 5):**
+```bash
+python evaluation/evaluate_bot.py 25 2 5 h rcot-gpt41 none-gpt41 mcts bt3 rndm --name gigl-random --time
+```
+
+**Generate Statistics Table (Table 1 - Model Comparison):**
 ```bash
 python evaluation/generate_table.py evaluation_results/<your_test_directory>/results.csv evaluation_results/<your_test_directory>/execution_times.json
+# OR use the explicit model table script:
+python evaluation/generate_table_models.py evaluation_results/<your_test_directory>/results.csv evaluation_results/<your_test_directory>/execution_times.json
+```
+
+**Generate Scenario Comparison Table (Table 2):**
+```bash
+# Requires consolidated results.csv with Scenario column (from all_scenarios/)
+python evaluation/generate_table_scenarios.py evaluation_results/all_scenarios/results.csv --data playerhealth
+python evaluation/generate_table_scenarios.py evaluation_results/all_scenarios/results.csv --data winrate
+python evaluation/generate_table_scenarios.py evaluation_results/all_scenarios/results.csv --data totaltokens
 ```
 
 **Plot Results:**
@@ -41,6 +56,59 @@ python evaluation/plot_evaluation.py evaluation_results/<your_test_directory>/re
 # For card generation results (group by CardName):
 python evaluation/plot_evaluation.py evaluation_results/card_gen_<name>_enemies_<enemies>_<test_count>_<bot>/results.csv CardName
 ```
+
+## Table Generation Scripts
+
+### `generate_table.py` / `generate_table_models.py` (Table 1 - Model Performance)
+Generates model performance comparison table with detailed LLM metrics.
+
+**Usage:**
+```bash
+python evaluation/generate_table.py <results.csv> <execution_times.json>
+```
+
+**Output:**
+- Groups by BotName
+- Displays: Total Requests, Total Tokens, Avg Response Time, Invalid Response %, Avg Execution Time
+- Saves to `stats_table.md` in same directory as input CSV
+
+**Example:**
+```bash
+python evaluation/generate_table.py evaluation_results/premium_starter-ironclad_enemies_h_25_boteval/results.csv evaluation_results/premium_starter-ironclad_enemies_h_25_boteval/execution_times.json
+```
+
+### `generate_table_scenarios.py` (Table 2 - Scenario Comparison)
+Generates scenario comparison table with BotNames as columns and Scenarios as rows.
+
+**Usage:**
+```bash
+python evaluation/generate_table_scenarios.py <consolidated_results.csv> --data <metric>
+```
+
+**Arguments:**
+- `csv_file`: Path to consolidated results.csv with Scenario column
+- `--data <metric>`: Metric to display (default: playerhealth)
+  - `playerhealth`: Average Player Health
+  - `winrate`: Win Rate (%)
+  - `totaltokens`: Total Tokens
+  - `totalrequests`: Total Requests
+  - `stdplayerhealth`: Standard Deviation of Player Health
+
+**Output:**
+- 5x5 table (Scenarios × BotNames)
+- Saves to `scenario_table_<metric>.md`
+
+**Example:**
+```bash
+python evaluation/generate_table_scenarios.py evaluation_results/all_scenarios/results.csv --data playerhealth
+python evaluation/generate_table_scenarios.py evaluation_results/all_scenarios/results.csv --data winrate
+```
+
+**Note:** To create a consolidated results.csv with Scenario column:
+1. Create `evaluation_results/all_scenarios/` directory
+2. Combine individual scenario CSVs, adding a "Scenario" column to each
+3. Example script to consolidate results is in `evaluation_results/all_scenarios/combine_results.py`
+
 ## How to run
 
 ### Available Bots (All use group 3's agents and not the paper's)
@@ -118,7 +186,13 @@ python evaluation/evaluate_bot.py <test_count> <thread_count> <scenario> <enemie
 **Arguments:**
 - `test_count`: Number of test simulations to run per bot
 - `thread_count`: Number of parallel threads to use (this makes it faster but leads to pickling if my code breaks)
-- `scenario`: Scenario index (0-4) These scenarios are the same as the paper: starter, batter-stimulate, bomb, tolerate, and harm; numbered accordingly.
+- `scenario`: Scenario index (0-5)
+  - 0: starter-ironclad (5 Strikes, 4 Defends, 1 Bash)
+  - 1: basics-batter-stimulate (5 Strikes, 4 Defends, Batter, Stimulate)
+  - 2: 1s3d-tolerate (1 Strike, 3 Defends, Tolerate)
+  - 3: basics-bomb (5 Strikes, 4 Defends, Bomb)
+  - 4: basics-suffer (5 Strikes, 4 Defends, Suffer)
+  - 5: gigl-random-deck (20 random GIGL generated cards, no basic cards)
 - `enemies`: Enemy configuration string (see Available Enemies above)
 - `bot1`, `bot2`, etc.: Bot names to evaluate (see Available Bots above)
 

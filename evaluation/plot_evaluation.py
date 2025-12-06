@@ -3,6 +3,7 @@ import seaborn as sns
 import argparse
 import numpy as np
 from matplotlib import pyplot as plt
+from pathlib import Path
 
 def main():
     parser = argparse.ArgumentParser()
@@ -36,6 +37,8 @@ def main():
     plt.title(f"Distribution of {target_col} by {by_col} - {test_count} Samples")
     plt.xlabel(target_col)
     plt.ylabel("Count")
+    output_path = Path(args.filename).parent / "histogram.png"
+    plt.savefig(output_path, dpi=150, bbox_inches='tight')
     plt.show()
 
 if __name__ == '__main__':

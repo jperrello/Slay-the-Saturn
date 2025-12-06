@@ -1,15 +1,3 @@
-"""
-Stats to replicate table 1 from the paper:
-- Average Response Time per API call
-- Average Execution Time per Simulation (need to use the --time flag)
-- Invalid Response Percentage
-- Total Requests 
-- Total Tokens 
-- Average Player Health
-- Win Rate
-
-"""
-
 import pandas as pd
 import argparse
 import json
@@ -26,7 +14,7 @@ def load_exe_times(json_path: Optional[str]) -> dict:
 
 def gen_table(csv_path: str, execution_times_path: Optional[str] = None):
 
-    
+
     df = pd.read_csv(csv_path)
     execution_times = load_exe_times(execution_times_path)
     grouped = df.groupby('BotName')

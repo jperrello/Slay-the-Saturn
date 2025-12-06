@@ -228,7 +228,16 @@ class CardRepo:
         deck: list[Card] = CardRepo.get_basics()
         deck += [CardGen.Suffer()]
         return "basics-suffer", deck
-    
+
+    @staticmethod
+    def get_scenario_5() -> tuple[str, list[Card]]:
+        import os
+        import glob as glob_lib
+        gigl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "GIGL", "generated_cards")
+        json_files = glob_lib.glob(os.path.join(gigl_dir, "*.json"))
+        deck: list[Card] = [CardRepo.load_card_from_json(f) for f in json_files]
+        return "gigl-random-deck", deck
+
     @staticmethod
     def anonymize_scenario(scenario: tuple[str, list[Card]]) -> tuple[str, list[Card]]:
         name, cards = scenario
