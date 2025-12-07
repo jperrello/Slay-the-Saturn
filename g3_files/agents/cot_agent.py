@@ -186,7 +186,6 @@ class CotAgent(GGPA):
         return "\n".join(lines)
 
     def _parse_response(self, content: str, max_index: int) -> Optional[int]:
-        # Search for the final, required tag anywhere in the content
         match = re.search(r"CARD:\s*(\d+)", content)
 
         if match:
@@ -251,7 +250,6 @@ class CotAgent(GGPA):
                 continue
 
             content = response['choices'][0]['message']['content'].strip()
-            print(f"[Cot] response: {content}")
             move_index = self._parse_response(content, len(options))
 
             if move_index is not None:
