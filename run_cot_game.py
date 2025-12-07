@@ -13,7 +13,8 @@ assert os.getenv("OPENAI_API_KEY"), "Set OPENAI_API_KEY environment variable"
 
 enemy = JawWorm
 
-scenarios = [CardRepo.get_scenario_0(), CardRepo.get_scenario_1(), CardRepo.get_scenario_2(), CardRepo.get_scenario_3(), CardRepo.get_scenario_4()]
+#scenarios = [CardRepo.get_scenario_0(), CardRepo.get_scenario_1(), CardRepo.get_scenario_2(), CardRepo.get_scenario_3(), CardRepo.get_scenario_4()]
+scenarios = [CardRepo.get_scenario_0(), CardRepo.get_scenario_1()]
 agent = CotAgent()
 
 def run_scenario(scenario, enemy, agent, verbose=Verbose.LOG, ascention=0):
@@ -40,7 +41,7 @@ def run_scenario(scenario, enemy, agent, verbose=Verbose.LOG, ascention=0):
 
 results = []
 for scenario in scenarios:
-    for i in range(5):
+    for i in range(1):
         output = run_scenario(scenario, enemy, agent, verbose=Verbose.LOG, ascention=0)
         print(output)
         results.append(output)

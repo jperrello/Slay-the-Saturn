@@ -1,25 +1,69 @@
 from __future__ import annotations
-import re
+import time
+import random
+from typing import TYPE_CHECKING, Optional
+from dataclasses import dataclass, field
+
 from openai import OpenAI
+import os
+import re
+
 from ggpa.ggpa import GGPA
+from ggpa.prompt2 import get_agent_target_prompt, get_card_target_prompt
 from action.action import EndAgentTurn, PlayCard
 from auth import OPENROUTER_API_KEY
-from ggpa.prompt2 import get_agent_target_prompt, get_card_target_prompt
-from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from game import GameState
     from battle import BattleState
     from agent import Agent
     from card import Card
-    from action.action import Action
 
-# From Joey: I added shortnames so the testing file worked and I just made this openrouter instead of openai because I had a key with credits I coulld test with
-# Sry for not asking Reva, I can switch back if you want
+
+@dataclass
+class CotConfig:
+    model: str
+    temperature: float = 0.2 #limited exploration
+    max_tokens: int = 500
+    anonymize_cards: bool = True
+    retry_limit: int = 1
+    prompt_option: str = "Cot"
+
+
+@dataclass
+class CotStatistics:
+    total_requests: int = 0
+    invalid_responses: int = 0
+    total_tokens: int = 0
+    response_times: list[float] = field(default_factory=list)
+
+    @property
+    def avg_response_time(self) -> float:
+        return sum(self.response_times) / len(self.response_times) if self.response_times else 0.0
+
+    @property
+    def invalid_rate(self) -> float:
+        return (self.invalid_responses / self.total_requests * 100) if self.total_requests else 0.0
+
 
 class CotAgent(GGPA):
 
-    def __init__(self, model_name: str = "openai/gpt-4.1") -> None:
+    def __init__(self, model_name: str = "openai/gpt-4.1", config: Optional[CotConfig] = None) -> None:
+        self.config = config or CotConfig(model=model_name)
         self.model_name = model_name
+
+        self.system_prompt = (
+            "You are an expert card game strategist.\n"
+            "Analyze the game state and enemy intent.\n"
+            "You must choose ONLY ONE card from the list.\n"
+            "You can only play the card if you have ENOUGH mana to play it.\n"
+            "Your goal is to WIN the game and have as much health as you can remaining.\n"
+            "Your response MUST end with a single line formatted EXACTLY as:\n"
+            "CARD: <index>\n\n"
+            "Ex:\n"
+            "The enemy is attacking. I play Defend to block.\n"
+            "CARD: 2"
+        )
 
         # Determine short name for testing
         model_short_names = {
@@ -40,18 +84,8 @@ class CotAgent(GGPA):
         # All models use OpenRouter API so we can have lazy initialization for pickling during testing
         self._client = None
 
-        self.system_prompt = (
-            "You are an expert card game strategist.\n"
-            "Analyze the game state and enemy intent.\n"
-            "You must choose ONLY ONE card from the list.\n"
-            "You can only play the card if you have ENOUGH mana to play it.\n"
-            "Your goal is to WIN the game and have as much health as you can remaining.\n"
-            "Your response MUST end with a single line formatted EXACTLY as:\n"
-            "CARD: <index>\n\n"
-            "Ex:\n"
-            "The enemy is attacking. I play Defend to block.\n"
-            "CARD: 2"
-        )
+        self.stats = CotStatistics()
+        self.card_anonymization_map = {}
 
     @property
     def client(self):
@@ -66,148 +100,185 @@ class CotAgent(GGPA):
                 raise
         return self._client
 
-    def choose_agent_target(self, battle_state: BattleState, list_name: str, 
-                            agent_list: list[Agent]) -> Agent:
-        if len(agent_list) == 1:
-            return agent_list[0]
-        
-        prompt = get_agent_target_prompt(battle_state, list_name, agent_list)
-        
-        response = self._api_call(prompt) 
-        
-        if response and response.choices:
-            content = response.choices[0].message.content.strip()
-            try:
-                index = int(re.findall(r'\d+', content)[0])
-                if 0 <= index < len(agent_list):
-                    print(f"AGENT TARGET: {index}")
-                    return agent_list[index]
-            except (ValueError, IndexError):
-                print(f"ERROR IN CHOOSING AGENT TARGET")
-                pass
-        
-        print("ERROR & FALLBACK: AGENT TARGET IS SMALLEST HP")
-        return min(agent_list, key=lambda a: a.health)
+    def _anonymize_card_name(self, card_name: str) -> str:
+        if not self.config.anonymize_cards:
+            return card_name
 
-    def choose_card_target(self, battle_state: BattleState, list_name: str, 
-                           card_list: list[Card]) -> Card:
-        if len(card_list) == 1:
-            return card_list[0]
-        
-        prompt = get_card_target_prompt(battle_state, list_name, card_list)
-        
-        response = self._api_call(prompt)
-        if response and response.choices:
-            content = response.choices[0].message.content.strip()
-            try:
-                index = int(re.findall(r'\d+', content)[0])
-                if 0 <= index < len(card_list):
-                    print(f"CARD TARGET: {index}")
-                    return card_list[index]
-            except (ValueError, IndexError):
-                print(f"ERROR IN CARD TARGET")
-                pass
+        if card_name not in self.card_anonymization_map:
+            chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+            self.card_anonymization_map[card_name] = ''.join(random.choice(chars) for _ in range(6))
 
-        return card_list[0]
+        return self.card_anonymization_map[card_name]
+    #from the old agents used in the paper 
+    def _build_game_context(self, game_state: GameState, battle_state: BattleState) -> str:
+        lines = ["=== GAME RULES ==="]
+        lines.append("in this game, the player has a deck of cards.")
+        lines.append("at the start of every turn, you draw cards from your draw pile.")
+        lines.append("when the draw pile is empty, the discard pile is shuffled back into the draw pile.")
+        lines.append(f"at the start of every turn, you gain {game_state.max_mana} mana.")
+        lines.append("you can play cards by spending mana equal to the card's cost.")
+        lines.append("after playing a card, it moves to the discard pile.")
+        lines.append("when you end your turn, enemies perform their intended action.")
+        lines.append("enemy attacks reduce your block first, then your hp.")
+        lines.append("block is removed at the start of your turn.")
+        lines.append("")
+        lines.append("=== DECK COMPOSITION ===")
 
-    def choose_card(self, game_state: GameState, battle_state: BattleState) -> Action:
-            your_mana = battle_state.mana
-            max_mana = game_state.max_mana
+        all_cards = battle_state.draw_pile + battle_state.discard_pile + battle_state.hand + battle_state.exhaust_pile
+        card_counts = {}
+        for card in all_cards:
+            name = self._anonymize_card_name(card.name) # we still decided to do this after the presentation in class 
+            if name not in card_counts:
+                card_counts[name] = {'count': 0, 'card': card}
+            card_counts[name]['count'] += 1
 
-            enemy_info = ""
-            for enemy in battle_state.enemies:
-                enemy_info += f"\n{enemy.name}: HP {enemy.health}/{enemy.max_health}, Block {enemy.block}, Intent: {enemy.get_intention(game_state, battle_state)}"
+        for name, info in sorted(card_counts.items()):
+            card = info['card']
+            cost = card.mana_cost.peek()
+            desc = card.get_description() if hasattr(card, 'get_description') else str(card)
+            lines.append(f"{name} (cost {cost}): {desc} [{info['count']}x in deck]")
 
-            game_info = f"""
-            You have {your_mana} <MANA> out of the {max_mana} <MANA> that you get every turn. Your HP: {battle_state.player.health}/{battle_state.player.max_health}
-            Your Block: {battle_state.player.block}
-            Your Status Effects: {repr(battle_state.player.status_effect_state)}
-            Your Enemies are: {enemy_info}
+        return "\n".join(lines)
 
-            You have the following cards in your <EXHAUST_PILE>:
-            {'-empty-' if len(battle_state.exhaust_pile) == 0 else
-            ' '.join([f'{i}: {card.get_name()}' for i, card in enumerate(battle_state.exhaust_pile)])}
-            You have the following cards in your <DISCARD_PILE>:
-            {'-empty-' if len(battle_state.discard_pile) == 0 else
-            ' '.join([f'{i}: {card.get_name()}' for i, card in enumerate(battle_state.discard_pile)])}
-            You have the following cards in your <DRAW_PILE> (but in an unknown order):
-            {'-empty-' if len(battle_state.draw_pile) == 0 else
-            ' '.join([f'{i}: {card.get_name()}' for i, card in enumerate(battle_state.draw_pile)])}
-            You have the following cards in your <HAND>:
-            {'-empty-' if len(battle_state.hand) == 0 else
-            ' '.join([f'{i}: {card.get_name()}' for i, card in enumerate(battle_state.hand)])}
-            """
-            # cot_prompt = (
-            #     "You are an expert card game strategist.\n"
-            #     "Analyze the game state and enemy intent.\n"
-            #     "You must choose ONLY ONE action from the list.\n"
-            #     "Show your thinking step-by-step before the CARD action decision.\n"
-            #     "Your response MUST end with a single line formatted EXACTLY as:\n"
-            #     "Action: <index>\n\n"
-            #     "Ex:\n"
-            #     "The enemy is attacking. I play Shield to block.\n"
-            #     "CARD: 2"
-            # )
+    def _build_game_state(self, game_state: GameState, battle_state: BattleState,
+                         options: list[PlayCard | EndAgentTurn]) -> str:
+        player = battle_state.player
+        lines = [f"\n=== TURN {battle_state.turn} STATE ==="]
+        lines.append(f"mana: {battle_state.mana}/{game_state.max_mana}")
+        lines.append(f"player: {player.health}/{player.max_health} hp, {player.block} block")
+        lines.append(f"status effects: {repr(player.status_effect_state)}")
+        lines.append("")
 
-            options: list[Action] = self.get_choose_card_options(game_state, battle_state)
+        lines.append("enemies:")
+        for i, enemy in enumerate(battle_state.enemies):
+            intent = enemy.get_intention(game_state, battle_state)
+            lines.append(f"  {i}. {enemy.name}: {enemy.health}/{enemy.max_health} hp, {enemy.block} block")
+            lines.append(f"     intent: {intent}")
 
-            options_lines = []
-            for i, action in enumerate(options):
-                if isinstance(action, PlayCard):
-                    card = battle_state.hand[action.card_index]
-                    options_lines.append(f"{i}: Play {card.get_name()} (Cost: {card.mana_cost.peek()})")
-                elif isinstance(action, EndAgentTurn):
-                    options_lines.append(f"{i}: End Turn")
-            
-            your_options = " Your current options are:\n" + "\n".join(options_lines)
-
-            #prompt = game_info + "\n" + cot_prompt + "\n" + your_options
-            prompt = game_info + "\n" + your_options
-
-            output = self._api_call(prompt)
-
-            if not output.choices:
-                print("\n PARSE ERROR: No choices in response. End Turn.")
-                return options[-1]
-
-            content = output.choices[0].message.content.strip()
-            
-            match = re.search(r"CARD:\s*(\d+)", content)
-            
-            action_index = None
-            if match:
-                try:
-                    action_index = int(match.group(1))
-                except ValueError:
-                    print(f"Found 'Action:' but '{match.group(1)}' is not of int type.")
-                    action_index = None
-            
-            # fall back
-            if action_index is None:
-                print("No Action: <index> in response -> FALLBACK to END TURN")
-                return options[-1]
-            
-            if 0 <= action_index < len(options):
-                action_chosen = options[action_index]
-                print(f"AGENT CHOSE: {action_index}: {action_chosen.__class__.__name__}")
-                return action_chosen
+        lines.append("")
+        lines.append("=== YOUR OPTIONS ===")
+        for i, option in enumerate(options):
+            if isinstance(option, PlayCard):
+                card = battle_state.hand[option.card_index]
+                name = self._anonymize_card_name(card.name)
+                cost = card.mana_cost.peek()
+                desc = card.get_description() if hasattr(card, 'get_description') else str(card)
+                lines.append(f"{i}. play {name} (cost {cost}): {desc}")
             else:
-                print(f"Index {action_index} is out of range (range: 0-{len(options)-1}). END TURN")
-                return options[-1]
-        
-    def _api_call(self, prompt: str):
-        try:
-            #print(f"PROMPT: \n{prompt}\n") # prints prompt
+                lines.append(f"{i}. end turn")
 
+        return "\n".join(lines)
+
+    def _build_request(self, num_options: int) -> str:
+        lines = ["\n=== DECISION ==="]
+
+        if self.config.prompt_option != "Cot":
+            raise ValueError(f"CotAgent only supports prompt_option='Cot', got '{self.config.prompt_option}'")
+#Cot prompt
+        lines.append(
+        f"Reason about the best card to pick in under 100 words. Make sure to choose ONLY ONE CARD from the list at the end.\n"
+        f"Your response MUST end with a single line formatted EXACTLY as:\n"
+        f"CARD: <index (0-{num_options-1})>\n"
+        f"Ex:\n"
+        f"CARD: 3"
+        )
+
+        return "\n".join(lines)
+
+    def _parse_response(self, content: str, max_index: int) -> Optional[int]:
+        # Search for the final, required tag anywhere in the content
+        match = re.search(r"CARD:\s*(\d+)", content)
+
+        if match:
+            try:
+                action_index = int(match.group(1))
+                if 0 <= action_index < max_index:
+                    return action_index
+                else:
+                    print(f"Index {action_index} out of range.")
+                    return None
+            except ValueError:
+                return None
+        return None
+    
+    def _make_api_call(self, prompt: str) -> Optional[dict]:
+        try:
+            start = time.time()
+
+            messages = [
+                {"role": "system", "content": self.system_prompt},
+                {"role": "user", "content": prompt}]
+
+            # Make API call 
             response = self.client.chat.completions.create(
-                model=self.model_name,
-                messages=[
-                    {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": prompt}
-                ]
+                model=self.config.model,
+                messages=messages,
+                max_tokens=self.config.max_tokens,
+                temperature=self.config.temperature,
             )
-            return response
+
+            elapsed = time.time() - start
+            self.stats.total_requests += 1
+            self.stats.response_times.append(elapsed)
+
+            response_dict = response.model_dump()
+
+            if response.usage:
+                self.stats.total_tokens += response.usage.total_tokens
+
+            return response_dict
 
         except Exception as e:
-            print(f"ERROR: {type(e)}, {e}")
-            raise
+            print(f"[Cot] api call failed: {e}")
+            self.stats.invalid_responses += 1
+            return None
+
+    def choose_card(self, game_state: GameState, battle_state: BattleState) -> PlayCard | EndAgentTurn:
+        options = self.get_choose_card_options(game_state, battle_state)
+
+        prompt_parts = []
+
+        prompt_parts.append(self._build_game_state(game_state, battle_state, options))
+        prompt_parts.append(self._build_request(len(options)))
+
+        prompt = "\n".join(prompt_parts)
+
+        for attempt in range(self.config.retry_limit):
+            response = self._make_api_call(prompt)
+
+            if response is None:
+                time.sleep(1)
+                continue
+
+            content = response['choices'][0]['message']['content'].strip()
+            print(f"[Cot] response: {content}")
+            move_index = self._parse_response(content, len(options))
+
+            if move_index is not None:
+                return options[move_index]
+
+            self.stats.invalid_responses += 1
+
+        playable = [opt for opt in options if isinstance(opt, PlayCard)]
+        return random.choice(playable) if playable else options[-1]
+
+    def choose_agent_target(self, battle_state: BattleState, list_name: str,
+                          agent_list: list[Agent]) -> Agent:
+        if len(agent_list) == 1:
+            return agent_list[0]
+        return min(agent_list, key=lambda a: a.health)
+
+    def choose_card_target(self, battle_state: BattleState, list_name: str,
+                          card_list: list[Card]) -> Card:
+        if len(card_list) == 1:
+            return card_list[0]
+        return card_list[0]
+
+    def get_statistics(self) -> dict:
+        return {
+            'total_requests': self.stats.total_requests,
+            'invalid_responses': self.stats.invalid_responses,
+            'invalid_rate': self.stats.invalid_rate,
+            'total_tokens': self.stats.total_tokens,
+            'avg_response_time': self.stats.avg_response_time
+        }
