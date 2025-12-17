@@ -6,8 +6,8 @@ from dataclasses import dataclass, field
 
 from openai import OpenAI
 import os
-from ggpa.ggpa import GGPA
-from ggpa.prompt2 import get_agent_target_prompt, get_card_target_prompt
+from base_agent import GGPA
+from prompt_utils import get_agent_target_prompt, get_card_target_prompt
 from action.action import EndAgentTurn, PlayCard
 from auth import OPENROUTER_API_KEY
 

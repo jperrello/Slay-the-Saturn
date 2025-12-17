@@ -13,7 +13,7 @@ from battle import BattleState
 from config import Character, Verbose, CardType, Rarity
 from agent import AcidSlimeSmall, SpikeSlimeSmall, JawWorm
 from card import CardGen, Card
-from ggpa.backtrack import BacktrackBot
+from backtrack import BacktrackBot
 from value import ConstValue, UpgradableOnce
 from action.agent_targeted_action import DealAttackDamage
 from target.agent_target import ChooseAgentTarget, AgentSet, AllAgentsTarget

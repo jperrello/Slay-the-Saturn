@@ -4,10 +4,10 @@ from config import Character, Verbose
 from agent import AcidSlimeSmall, SpikeSlimeSmall, JawWorm
 from card import CardGen, CardRepo
 import time
-from ggpa.human_input import HumanInput
+from human_input import HumanInput
 from ggpa.chatgpt_bot import ChatGPTBot
-from ggpa.prompt2 import PromptOption
-from ggpa.backtrack import BacktrackBot
+from prompt_utils import PromptOption
+from backtrack import BacktrackBot
 # from ggpa.backtrack_parallel import BacktrackParallelBot # Removed as file missing in upload
 from ggpa.none_agent import NoneAgent
 from ggpa.basic_agent import BasicAgent

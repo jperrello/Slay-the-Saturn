@@ -15,11 +15,11 @@ from battle import BattleState
 from config import Character, Verbose
 from agent import AcidSlimeSmall, SpikeSlimeSmall, JawWorm, Goblin, HobGoblin, Leech, Enemy
 from card import CardGen, Card, CardRepo
-from ggpa.ggpa import GGPA
-from ggpa.random_bot import RandomBot
-from ggpa.backtrack import BacktrackBot
+from base_agent import GGPA
+from random_bot import RandomBot
+from backtrack import BacktrackBot
 from ggpa.chatgpt_bot import ChatGPTBot
-from ggpa.prompt2 import PromptOption
+from prompt_utils import PromptOption
 from ggpa.basic_agent import BasicAgent
 from g3_files.agents.mcts_bot import MCTSAgent
 from g3_files.agents.rcot_agent import RCotAgent, RCotConfig

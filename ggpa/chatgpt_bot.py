@@ -3,11 +3,11 @@ import time
 import json
 from enum import StrEnum
 from openai import OpenAI, RateLimitError # Import new client and error
-from ggpa.ggpa import GGPA
+from base_agent import GGPA
 from action.action import EndAgentTurn, PlayCard
 from auth import GPT_AUTH
 from utility import get_unique_filename
-from ggpa.prompt2 import PromptOption, get_action_prompt,\
+from prompt_utils import PromptOption, get_action_prompt,\
     get_agent_target_prompt, get_card_target_prompt,\
     strip_response, _get_game_context
 from typing import TYPE_CHECKING, Any
