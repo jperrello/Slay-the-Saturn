@@ -54,6 +54,120 @@ python evaluation/plot_evaluation.py evaluation_results/<your_test_directory>/re
 python evaluation/plot_evaluation.py evaluation_results/card_gen_<name>_enemies_<enemies>_<test_count>_<bot>/results.csv CardName
 ```
 
+## Saturn mDNS Integration
+
+Saturn is a local OpenRouter API proxy that allows you to route LLM API calls through a local server. The system uses mDNS (DNS Service Discovery) to automatically find Saturn servers on your local network.
+
+### Testing Saturn Discovery
+
+**Discover Saturn Servers:**
+```bash
+python g3_files/saturn_discovery.py
+```
+
+Expected output:
+```
+Searching for Saturn servers...
+
+Found 2 Saturn server(s):
+  - OpenRouter: http://192.168.56.1:8080 (priority=10)
+  - Saturn-Backup: http://192.168.56.1:8081 (priority=50)
+
+Best server (auto-selected): http://192.168.56.1:8080
+```
+
+### How Agents Use Saturn
+
+Modern LLM agents (CoT, RCoT, None) automatically discover and use Saturn servers:
+
+1. **Auto-Discovery**: At initialization, agents call `get_saturn_server()` from `saturn_discovery.py`
+2. **Priority Selection**: If multiple servers exist, the one with the **lowest priority value** is selected (lower = higher preference)
+3. **Graceful Fallback**: If no Saturn servers found, agents fall back to OpenRouter API directly (requires `OPENROUTER_API_KEY` in `.env`)
+
+**Agent initialization flow:**
+```
+Agent.__init__()
+  ↓
+saturn_url = get_saturn_server()  # mDNS discovery
+  ↓
+if saturn_url:
+    base_url = f"{saturn_url}/v1"  # e.g., http://192.168.56.1:8080/v1
+elif OPENROUTER_API_KEY:
+    base_url = "https://openrouter.ai/api/v1"  # Direct OpenRouter
+else:
+    raise ValueError("No Saturn or API key")
+```
+
+### URL Configuration Patterns
+
+The system uses different URL patterns at different layers:
+
+1. **Discovery returns**: `http://IP:PORT` (base URL only)
+2. **Agent base_url**: `http://IP:PORT/v1` (for OpenAI SDK to append `/chat/completions`)
+3. **Saturn forwards to**: `https://openrouter.ai/api/v1/chat/completions` (complete endpoint in `.env`)
+
+**Why `/v1` is added twice:**
+- OpenAI SDK automatically appends `/chat/completions` to `base_url`
+- Agents must provide `base_url` ending in `/v1` so final URL is `http://IP:PORT/v1/chat/completions`
+- Saturn server expects requests at `/v1/chat/completions` endpoint (see `saturn_files/openrouter_server.py:166`)
+
+### Environment Variables
+
+**`.env` file (required for Saturn server):**
+```bash
+OPENROUTER_API_KEY=sk-or-v1-...
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1/chat/completions
+```
+
+**Important:**
+- `OPENROUTER_BASE_URL` must be the **complete endpoint** (includes `/chat/completions`)
+- Saturn server POSTs directly to this URL (doesn't use OpenAI SDK)
+- Changes to `.env` require Saturn server restart (no hot reload)
+
+### Testing with Saturn
+
+**Test with Saturn auto-discovery:**
+```bash
+# Ensure Saturn server is running first
+python saturn_files/openrouter_server.py
+
+# Run evaluation (agents will auto-discover Saturn)
+python evaluation/evaluate_bot.py 5 1 0 h cot-gpt41 --name saturn_test
+```
+
+**Expected console output:**
+```
+[CoT] Using Saturn server: http://192.168.56.1:8080
+```
+
+**Test without Saturn (fallback):**
+```bash
+# Stop Saturn server, ensure OPENROUTER_API_KEY is in .env
+python evaluation/evaluate_bot.py 5 1 0 h cot-gpt41 --name openrouter_test
+```
+
+**Expected console output:**
+```
+[CoT] No Saturn servers found, using OpenRouter API directly
+```
+
+### Troubleshooting Saturn Discovery
+
+**No servers found:**
+1. Verify Saturn server is running: `python saturn_files/openrouter_server.py`
+2. Check dns-sd is available: `dns-sd -B _saturn._tcp local` (requires Bonjour on Windows)
+3. Ensure same network as Saturn server
+4. Check firewall settings
+
+**Wrong server selected (multiple servers):**
+- Discovery selects server with **lowest priority value**
+- Set priority via Saturn server config (TXT record in mDNS advertisement)
+- Default priority is 50 if not specified
+
+**404 or 502 errors:**
+- Verify Saturn base URL ends with `/v1`: Check agent code at `cot_agent.py:105`, `rcot_agent.py:89`, `none_agent.py:90`
+- Verify `.env` has complete endpoint: `OPENROUTER_BASE_URL=https://openrouter.ai/api/v1/chat/completions`
+
 ## How to run
 
 ### Available Bots (All use group 3's agents and not the paper's)

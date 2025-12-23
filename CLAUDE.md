@@ -12,41 +12,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-### Running Games
-```bash
-# Single game with human/basic agent
-python main.py
+### @TESTING.md
 
-# Single game with CoT agent (requires OPENAI_API_KEY in .env)
-python run_cot_game.py
+@TESTING.md contains all development commands needed to run this project, this includes bot evaluation, plotting figures, and card generation. If you need to run a test command it will be in this file. When asked to update or remove a specific command in a testing file, this is the fike to edit.
 
-# Generate procedural cards
-python GIGL/main.py
-```
-
-### Agent Evaluation
-```bash
-# Basic agent comparison (50 games, 4 threads, scenario 0, HobGoblin enemy)
-python evaluation/evaluate_bot.py 50 4 0 h cot-gpt41 rcot-claude none-gemini mcts rndm --name test --time
-
-# Test generated cards (10 games per card, 4 threads, 20 cards, HobGoblin enemy)
-python evaluation/evaluate_card_gen.py 10 4 20 h cot-claude --gigl-dir GIGL/generated_cards --name gigl_test
-
-# GIGL random deck scenario (scenario 5: 20 random GIGL cards)
-python evaluation/evaluate_bot.py 25 2 5 h rcot-gpt41 none-gpt41 mcts bt3 rndm --name gigl-random --time
-```
-
-### Analysis & Visualization
-```bash
-# Generate model comparison table (Table 1 from paper)
-python evaluation/generate_table_models.py evaluation_results/<test_dir>/results.csv evaluation_results/<test_dir>/execution_times.json
-
-# Generate scenario comparison table (Table 2 from paper)
-python evaluation/generate_table_scenarios.py evaluation_results/all_scenarios/results.csv --data playerhealth
-
-# Plot evaluation results (histogram with KDE)
-python evaluation/plot_evaluation.py evaluation_results/<test_dir>/results.csv BotName
-```
 
 ## High-Level Architecture
 
@@ -91,6 +60,44 @@ All modern agents use `@dataclass` configs (e.g., `CotConfig`) with:
 - `auth.py`: API key loading from `.env` file
 - Uses OpenAI SDK (openai==0.28.0) with OpenRouter for multi-backend support
 
+### Saturn mDNS Integration
+Saturn is a local OpenRouter API proxy server that allows routing LLM API calls through a local network server. The system uses mDNS (DNS Service Discovery) for automatic server discovery.
+
+**Key Components:**
+- `g3_files/saturn_discovery.py`: mDNS discovery module for finding Saturn servers
+  - `get_saturn_server()`: Returns best server URL or None (line 39)
+  - `get_all_saturn_servers()`: Returns all discovered servers sorted by priority (line 66)
+  - `_run_dns_sd_discovery()`: Uses dns-sd command for service discovery (line 95)
+- `saturn_files/openrouter_server.py`: Saturn proxy server implementation
+  - Advertises via mDNS as `_saturn._tcp.local` service
+  - Proxies requests to OpenRouter API configured in `.env`
+  - Endpoint: `/v1/chat/completions` (line 166)
+
+**Agent Integration:**
+All modern LLM agents (CoT, RCoT, None) automatically discover and use Saturn at initialization:
+1. Call `get_saturn_server()` from `saturn_discovery.py`
+2. If server found: use `base_url=f"{saturn_url}/v1"` with dummy API key
+3. If not found: fall back to OpenRouter with `OPENROUTER_API_KEY` from `.env`
+4. If neither: raise ValueError with setup instructions
+
+**URL Pattern Details:**
+- **Discovery returns**: `http://IP:PORT` (base URL only, from mDNS TXT record)
+- **Agent configures**: `base_url=f"{saturn_url}/v1"` (OpenAI SDK appends `/chat/completions`)
+- **Final request URL**: `http://IP:PORT/v1/chat/completions` (matches Saturn endpoint)
+- **Saturn forwards to**: `OPENROUTER_BASE_URL` from `.env` (must include `/chat/completions`)
+
+**Priority Handling:**
+- Multiple Saturn servers can exist on network
+- Each server advertises a priority value (default: 50, lower = higher preference)
+- `get_saturn_server()` returns server with lowest priority value
+- Deduplication prefers non-loopback IPs when priority is equal
+
+**Code References:**
+- Agent initialization: `cot_agent.py:101-119`, `rcot_agent.py:85-103`, `none_agent.py:86-104`
+- Discovery logic: `saturn_discovery.py:39-63`
+- Priority selection: `saturn_discovery.py:62` (uses `min()` on priority)
+- Deduplication: `saturn_discovery.py:190-207`
+
 ### GIGL Card Generation
 `GIGL/` directory contains procedural card generation system:
 - `generator.py`: Card blueprint creation using grammar rules
@@ -126,15 +133,7 @@ Configuration uses OpenRouter API model names:
 - Google: `"google/gemini-3-pro-preview"`
 - Free models: `"meta-llama/llama-3.3-70b-instruct"`, `"qwen/qwen-3-72b-instruct"`, etc.
 
-## Critical Implementation Details
-
-### API Keys
-Create `.env` file with:
-```
-OPENAI_API_KEY=sk-...
-OPENROUTER_API_KEY=sk-...
-```
-Keys are optional (fallback to empty string) - allows running non-LLM agents without API access.
+## I have handled API keys
 
 ### Game Flow
 ```
