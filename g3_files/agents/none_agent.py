@@ -10,6 +10,9 @@ from base_agent import GGPA
 from prompt_utils import PromptOption, get_action_prompt, get_agent_target_prompt, get_card_target_prompt, strip_response
 from action.action import EndAgentTurn, PlayCard
 from auth import OPENROUTER_API_KEY
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from saturn_discovery import get_saturn_server
 
 if TYPE_CHECKING:
     from game import GameState
@@ -24,6 +27,7 @@ class NoneConfig:
     temperature: float = 0.0
     max_tokens: int = 100
     retry_limit: int = 3
+    saturn_server_name: Optional[str] = None  # Specific Saturn server to use (by name)
 
 
 @dataclass
@@ -76,12 +80,37 @@ class NoneAgent(GGPA):
     def client(self):
         if self._client is None:
             try:
-                self._client = OpenAI(
-                    base_url="https://openrouter.ai/api/v1",
-                    api_key=OPENROUTER_API_KEY,
-                )
+                # Attempt Saturn discovery first
+                saturn_url = get_saturn_server(preferred_name=self.config.saturn_server_name)
+
+                if saturn_url:
+                    # Saturn server found - use local proxy
+                    print(f"[None] Using Saturn server: {saturn_url}")
+                    self._client = OpenAI(
+                        base_url=f"{saturn_url}/v1",
+                        api_key="dummy",  # Saturn doesn't need real API key
+                    )
+                elif OPENROUTER_API_KEY:
+                    # No Saturn, but API key available - use OpenRouter directly
+                    print(f"[None] No Saturn servers found, using OpenRouter API directly")
+                    self._client = OpenAI(
+                        base_url="https://openrouter.ai/api/v1",
+                        api_key=OPENROUTER_API_KEY,
+                    )
+                else:
+                    # No Saturn and no API key - fail with helpful message
+                    raise ValueError(
+                        "No Saturn servers found and no API key configured.\n"
+                        "To fix this:\n"
+                        "  1. Start a Saturn server: python saturn_files/openrouter_server.py\n"
+                        "  OR\n"
+                        "  2. Set OPENROUTER_API_KEY in .env file"
+                    )
+            except ValueError:
+                # Re-raise our helpful error message
+                raise
             except Exception as e:
-                print(f"\nAPI KEY ERROR: {type(e)}, {e}")
+                print(f"\nAPI CLIENT ERROR: {type(e)}, {e}")
                 raise
         return self._client
 
