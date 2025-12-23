@@ -1,10 +1,10 @@
 # MiniStS Language-Driven Play Reimagined
 
-**AI Disclaimer**
+## AI Disclaimer
 Hello, I am Joey and this is a personal playground for me to gain experience using Claude Code. It is an expansion of an old project, as you will soon read, and it is written by Claude Code. It is *AI generated*, and I understand if you would not like to interact with it. I want to offer full transparency. I am still heavily involved in the development, I just use agentic methods.
 
 
-> **Advanced LLM Agent Research Platform for Slay the Spire**
+## Advanced LLM Agent Research Platform for Slay the Spire
 
 This repository extends the original [MiniSTS](https://github.com/iambb5445/MiniSTS) framework by **iambb5445** with advanced language-driven play capabilities, chain-of-thought reasoning, and procedural card generation systems for LLM agent research.
 
