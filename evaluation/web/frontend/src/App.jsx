@@ -77,6 +77,16 @@ function Home() {
 function RaceMonitor({ socket }) {
   const [raceStatus, setRaceStatus] = useState('idle')
   const [racers, setRacers] = useState([])
+  const [raceData, setRaceData] = useState(null)
+  const [showForm, setShowForm] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    scenario: '0',
+    enemies: 'h',
+    bot_names: 'mcts,bt3,rndm',
+    test_count: '25',
+    thread_count: '4'
+  })
 
   useEffect(() => {
     if (!socket) return
@@ -84,6 +94,7 @@ function RaceMonitor({ socket }) {
     socket.on('race_started', (data) => {
       console.log('Race started:', data)
       setRaceStatus('running')
+      setShowForm(false)
       setRacers(data.bot_names.map(name => ({
         name,
         wins: 0,
@@ -109,6 +120,7 @@ function RaceMonitor({ socket }) {
     socket.on('race_finished', (data) => {
       console.log('Race finished:', data)
       setRaceStatus('finished')
+      setRaceData(data)
     })
 
     socket.on('error_logged', (data) => {
@@ -123,9 +135,151 @@ function RaceMonitor({ socket }) {
     }
   }, [socket])
 
+  const handleFormChange = (e) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleStartRace = async (e) => {
+    e.preventDefault()
+    setIsLoading(true)
+    
+    try {
+      const response = await fetch('http://localhost:8000/api/race/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          scenario: parseInt(formData.scenario),
+          enemies: formData.enemies,
+          bot_names: formData.bot_names.split(',').map(b => b.trim()),
+          test_count: parseInt(formData.test_count),
+          thread_count: parseInt(formData.thread_count)
+        })
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Failed to start race: ${response.statusText}`)
+      }
+      
+      const data = await response.json()
+      console.log('Race started:', data)
+    } catch (error) {
+      console.error('Error starting race:', error)
+      alert(`Error: ${error.message}`)
+      setIsLoading(false)
+    }
+  }
+
+  const handleDownloadCSV = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/race/download')
+      
+      if (!response.ok) {
+        throw new Error(`Failed to download CSV: ${response.statusText}`)
+      }
+      
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'race-results.csv'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Error downloading CSV:', error)
+      alert(`Error: ${error.message}`)
+    }
+  }
+
   return (
     <div className="RaceMonitor">
       <h2>Race Monitor</h2>
+      
+      {showForm && (
+        <div className="race-form">
+          <h3>Start a New Race</h3>
+          <form onSubmit={handleStartRace}>
+            <div className="form-group">
+              <label htmlFor="scenario">Scenario:</label>
+              <select
+                id="scenario"
+                name="scenario"
+                value={formData.scenario}
+                onChange={handleFormChange}
+              >
+                <option value="0">0: starter-ironclad</option>
+                <option value="1">1: basics-batter-stimulate</option>
+                <option value="2">2: tolerate</option>
+                <option value="3">3: basics-bomb</option>
+                <option value="4">4: basics-suffer</option>
+                <option value="5">5: gigl-random-deck</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="enemies">Enemies:</label>
+              <input
+                id="enemies"
+                type="text"
+                name="enemies"
+                value={formData.enemies}
+                onChange={handleFormChange}
+                placeholder="e.g., h, ghl, j"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="bot_names">Bot Names (comma-separated):</label>
+              <input
+                id="bot_names"
+                type="text"
+                name="bot_names"
+                value={formData.bot_names}
+                onChange={handleFormChange}
+                placeholder="e.g., mcts, bt3, rndm"
+              />
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="test_count">Test Count:</label>
+                <input
+                  id="test_count"
+                  type="number"
+                  name="test_count"
+                  value={formData.test_count}
+                  onChange={handleFormChange}
+                  min="1"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="thread_count">Thread Count:</label>
+                <input
+                  id="thread_count"
+                  type="number"
+                  name="thread_count"
+                  value={formData.thread_count}
+                  onChange={handleFormChange}
+                  min="1"
+                />
+              </div>
+            </div>
+
+            <button type="submit" disabled={isLoading} className="start-button">
+              {isLoading ? 'Starting...' : 'Start Race'}
+            </button>
+          </form>
+        </div>
+      )}
+
       <div className="race-status">
         Status: <span className={`status-${raceStatus}`}>{raceStatus.toUpperCase()}</span>
       </div>
@@ -176,7 +330,23 @@ function RaceMonitor({ socket }) {
           ))}
         </div>
       ) : (
-        <p className="no-race">No active race. Start a race from the backend to see live updates.</p>
+        <p className="no-race">No active race. Fill out the form to start a race.</p>
+      )}
+
+      {raceStatus === 'finished' && (
+        <div className="race-actions">
+          <button onClick={handleDownloadCSV} className="download-button">
+            Download Results as CSV
+          </button>
+          <button onClick={() => {
+            setShowForm(true)
+            setRaceStatus('idle')
+            setRacers([])
+            setRaceData(null)
+          }} className="new-race-button">
+            Start New Race
+          </button>
+        </div>
       )}
     </div>
   )

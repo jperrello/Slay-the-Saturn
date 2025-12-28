@@ -2,6 +2,8 @@ import sys
 import sys
 import os
 from pathlib import Path
+import csv
+import io
 
 project_root = Path(__file__).parent.parent.parent.parent
 evaluation_dir = project_root / 'evaluation'
@@ -11,7 +13,7 @@ sys.path.insert(0, str(evaluation_dir))
 import socketio
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -99,6 +101,28 @@ async def start_race(config: RaceConfig):
         'bots': config.bot_names,
         'total_simulations': config.test_count * len(config.bot_names)
     }
+
+@app.get('/api/race/download')
+async def download_race_results():
+    if race_manager.current_race is None or not race_manager.current_race.results:
+        raise HTTPException(status_code=404, detail="No race results available")
+    
+    results = race_manager.current_race.results
+    
+    output = io.StringIO()
+    if results:
+        fieldnames = list(results[0].keys())
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(results)
+    
+    output.seek(0)
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type='text/csv',
+        headers={'Content-Disposition': 'attachment; filename="race-results.csv"'}
+    )
 
 @app.get('/{full_path:path}')
 async def serve_frontend(full_path: str):
