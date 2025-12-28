@@ -50,9 +50,6 @@ socket_app = socketio.ASGIApp(
 race_manager = RaceManager(sio)
 
 static_dir = Path(__file__).parent.parent / 'static'
-if static_dir.exists():
-    app.mount('/assets', StaticFiles(directory=str(static_dir / 'assets')), name='assets')
-    app.mount('/static', StaticFiles(directory=str(static_dir)), name='static')
 
 class RaceConfig(BaseModel):
     scenario: int
@@ -105,6 +102,18 @@ async def start_race(config: RaceConfig):
 
 @app.get('/{full_path:path}')
 async def serve_frontend(full_path: str):
+    requested_file = static_dir / full_path
+    
+    if requested_file.exists() and requested_file.is_file():
+        try:
+            requested_file_resolved = requested_file.resolve()
+            static_dir_resolved = static_dir.resolve()
+            
+            if static_dir_resolved in requested_file_resolved.parents or requested_file_resolved.parent == static_dir_resolved:
+                return FileResponse(str(requested_file))
+        except (ValueError, OSError):
+            pass
+    
     index_file = static_dir / 'index.html'
     if index_file.exists():
         return FileResponse(str(index_file))
