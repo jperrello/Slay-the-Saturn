@@ -1,0 +1,16 @@
+BotName,PlayerHealth,Win,TotalRequests,InvalidResponses,TotalTokens,AvgResponseTime,InvalidRate
+MCTSAgent,31,True,0,0,0,0.0,0.0
+MCTSAgent,0,False,0,0,0,0.0,0.0
+MCTSAgent,0,False,0,0,0,0.0,0.0
+MCTSAgent,0,False,0,0,0,0.0,0.0
+MCTSAgent,0,False,0,0,0,0.0,0.0
+RandomBot,0,False,0,0,0,0.0,0.0
+RandomBot,24,True,0,0,0,0.0,0.0
+RandomBot,2,True,0,0,0,0.0,0.0
+RandomBot,0,False,0,0,0,0.0,0.0
+RandomBot,0,False,0,0,0,0.0,0.0
+Backtrack-Depth3,26,True,0,0,0,0.0,0.0
+Backtrack-Depth3,36,True,0,0,0,0.0,0.0
+Backtrack-Depth3,48,True,0,0,0,0.0,0.0
+Backtrack-Depth3,26,True,0,0,0,0.0,0.0
+Backtrack-Depth3,48,True,0,0,0,0.0,0.0

@@ -1,0 +1,2 @@
+BotName,PlayerHealth,Win,TotalRequests,InvalidResponses,TotalTokens,AvgResponseTime,InvalidRate
+CoT-gpt41,36,True,0,13,0,0.0,0.0
