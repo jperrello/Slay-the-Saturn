@@ -106,9 +106,9 @@ class RaceState:
 
     def log_error(self, bot_name: str, sim_index: int, error_info: str):
         self.errors.append({
-            'bot': bot_name,
-            'simulation': sim_index,
-            'error': error_info,
+            'bot_name': bot_name,
+            'sim_index': sim_index,
+            'error_msg': error_info,
             'time': datetime.now().strftime('%H:%M:%S')
         })
 
