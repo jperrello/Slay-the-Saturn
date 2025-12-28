@@ -1,7 +1,58 @@
-# CLAUDE.md
+# Agent Instructions
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started. We also use MCP servers and agents, utilize the installed ones to their fullest capabilities. Example: serena for reading, code-analyzer for understanding code flow.
 
+## Quick Reference
+
+```bash
+bd ready              # Find available work
+bd show <id>          # View issue details
+bd update <id> --status in_progress  # Claim work
+bd close <id>         # Complete work
+bd sync               # Sync with git
+```
+
+## Landing the Plane (Session Completion)
+
+**When ending a work session (user says "land the plane")**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+
+**MANDATORY WORKFLOW:**
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Linus Tests** Review your code as Linus Torvalds would.
+4. **Update issue status** - Close finished work, update in-progress items
+5. **PUSH TO REMOTE** - work methodically to ensure both local and remote
+issues merge safely. This may require pulling, handling conflicts (sometimes accepting remote
+changes and re-importing), syncing the database, and verifying consistency. Be creative and
+patient - the goal is clean reconciliation where no issues are lost. Basic example:
+   ```bash
+   git pull --rebase
+   bd sync
+   git push
+   git status  # MUST show "up to date with origin"
+   ```
+6. **Clean up** - Clear stashes, prune remote branches
+7. **Verify** - All changes committed AND pushed
+8. **Choose a follow-up issue for next session**
+- Provide a prompt for the user to give to you in the next session
+- Format: "Continue work on bd-X: [issue title]. [Brief context about what's been done and
+what's next]"
+
+**CRITICAL RULES:**
+- Work is NOT complete until `git push` succeeds
+- NEVER STOP before pushing - that leaves work stranded locally
+- NEVER say "ready to push when you are" - YOU must push
+- If push fails, resolve and retry until it succeeds
+
+
+## Important:
+- **NEVER add co-author information or Claude attribution**
+- Commits should be authored solely by the user
+- Do not include any "Generated with Claude" messages
+- Do not add "Co-Authored-By" lines
+- Write commit messages as if the user wrote them
+- **ALWAYS use conventional commit format for automated versioning**
 ## Project Overview
 
 **MiniStS Language-Driven Play Reimagined** is a research platform for evaluating LLM agents in Slay the Spire-like card game scenarios. The codebase extends the original MiniSTS framework by iambb5445 with:
@@ -98,102 +149,4 @@ All modern LLM agents (CoT, RCoT, None) automatically discover and use Saturn at
 - Priority selection: `saturn_discovery.py:62` (uses `min()` on priority)
 - Deduplication: `saturn_discovery.py:190-207`
 
-### GIGL Card Generation
-`GIGL/` directory contains procedural card generation system:
-- `generator.py`: Card blueprint creation using grammar rules
-- `grammar.py`: Context-free grammar for card generation
-- `balancer.py`: Validates cost/effect balance based on configurable metrics
-- `validator.py`: Ensures game rule compliance
-- `configs/`: JSON configuration files for grammar and balancing
-- `generated_cards/`: Pre-generated card outputs
-
-### Evaluation Infrastructure
-`evaluation/` provides multi-threaded agent testing:
-- `evaluate_bot.py`: Core benchmarking script (uses joblib for parallelization)
-  - Supports 40+ bot configurations via `name_to_bot()` factory
-  - 6 scenario presets (0=starter-ironclad, 1=batter-stimulate, 2=tolerate, 3=bomb, 4=suffer, 5=gigl-random-deck)
-  - Enemy configs: h=HobGoblin, g=Goblin, l=Leech, j=JawWorm
-  - Output: `evaluation_results/<name>_<scenario>_enemies_<enemies>_<test_count>_boteval/results.csv`
-- `evaluate_card_gen.py`: Tests impact of generated cards on bot performance
-- `generate_table_models.py`: Table 1 - model performance comparison (tokens, response time, win rate)
-- `generate_table_scenarios.py`: Table 2 - scenario × bot comparison matrix
-- `plot_evaluation.py`: Histogram with KDE of player health outcomes
-
-## Agent Configuration Pattern
-
-Modern agents use string identifiers in evaluation scripts:
-- CoT variants: `cot-gpt41`, `cot-claude`, `cot-gemini`, `cot-llama-free`, etc.
-- RCoT variants: `rcot-gpt41`, `rcot-claude`, `rcot-openrouter-auto`, etc.
-- None (minimal) variants: `none-gpt41`, `none-claude`, `none-gemini`, etc.
-- Traditional: `mcts`, `mcts-200`, `bt3`, `bt5` (backtrack with depth), `rndm` (random)
-
-Configuration uses OpenRouter API model names:
-- OpenAI: `"openai/gpt-4.1"`
-- Anthropic: `"anthropic/claude-sonnet-4.5"`
-- Google: `"google/gemini-3-pro-preview"`
-- Free models: `"meta-llama/llama-3.3-70b-instruct"`, `"qwen/qwen-3-72b-instruct"`, etc.
-
-## I have handled API keys
-
-### Game Flow
-```
-GameState (character, bot, deck)
-  ↓
-BattleState (game_state, enemies, verbose_level)
-  ↓
-battle_state.run() - Main loop:
-  └─ Turn Phase:
-     ├─ Draw cards into hand
-     ├─ Player chooses action via bot.choose_card()
-     │  └─ For LLM: generate prompt → call API → parse response
-     ├─ Execute card.play() action
-     ├─ Clean up player state
-     └─ Enemy turns (get_intention + execute)
-  ↓
-Return: BattleState with final health/win status
-```
-
-### Evaluation Output
-Results saved to `evaluation_results/` with structure:
-```
-<test_name>_<scenario>_enemies_<enemies>_<test_count>_boteval/
-├── results.csv          # Columns: BotName, PlayerHealth, Win, Scenario
-├── execution_times.json # Per-bot timing statistics (if --time flag used)
-└── <id>_<bot>.log      # Individual simulation logs (if --log flag used)
-```
-
-### Multi-Threading
-- Uses `joblib` for parallel evaluation
-- Can cause pickle serialization errors if agent code has issues
-- Thread count controls parallelization: higher = faster but more memory
-
-### Card Anonymization
-Modern agents support `anonymize_cards=True` in config to hide card names from LLM (prevents exploitation of naming conventions).
-
-## Important Files for New Features
-
-- **New agent type**: Create in `g3_files/agents/`, inherit from `base_agent.GGPA`, add to `evaluate_bot.py::name_to_bot()`
-- **New card**: Add to `card.py::CardRepo` scenarios or generate via `GIGL/main.py`
-- **New enemy**: Add to `agent.py` as Enemy subclass, update `evaluate_bot.py` enemy parser
-- **New scenario**: Add to `card.py::CardRepo`, update `evaluate_bot.py` scenario list
-- **New evaluation metric**: Modify `evaluation/generate_table_models.py` or `generate_table_scenarios.py`
-
-## Dependencies
-```
-matplotlib==3.8.0
-tqdm==4.66.1
-pandas==2.1.0
-numpy==1.25.2
-openai==0.28.0
-joblib==1.3.2
-```
-
-Install: `pip install -r requirements.txt`
-
-## Research Context
-
-Published research:
-1. "MiniStS: A Testbed for Dynamic Rule Exploration" (AIIDE 2024) - GIGL system
-2. "Language-Driven Play: Large Language Models as Game-Playing Agents in Slay the Spire" (FDG 2024) - CoT reasoning strategies
-
-Latest evaluation results in `evaluation_results/premium/` and scenario-specific directories.
+REMEMBER TO ALWAYS PUSH
