@@ -54,6 +54,15 @@ python evaluation/plot_evaluation.py evaluation_results/<your_test_directory>/re
 python evaluation/plot_evaluation.py evaluation_results/card_gen_<name>_enemies_<enemies>_<test_count>_<bot>/results.csv CardName
 ```
 
+**TUI Race Visualization (NEW!):**
+```bash
+# Quick visual test with fast bots:
+python evaluation/tui_main.py 10 2 0 h rndm bt3 mcts
+
+# Compare LLM agents in real-time (requires API keys):
+python evaluation/tui_main.py 5 4 0 h rcot-gpt41 cot-claude mcts
+```
+
 ## Saturn mDNS Integration
 
 Saturn is a local OpenRouter API proxy that allows you to route LLM API calls through a local server. The system uses mDNS (DNS Service Discovery) to automatically find Saturn servers on your local network.
@@ -300,6 +309,289 @@ python evaluation/plot_evaluation.py evaluation_results/my_test/results.csv BotN
 **Output:**
 - Displays histogram with KDE showing distribution of PlayerHealth by the specified column
 - Prints mean PlayerHealth for each group
+
+---
+
+### 4. TUI Race Visualization (`tui_main.py`)
+
+An interactive TypeRacer-style terminal interface for real-time agent evaluation visualization with comprehensive performance metrics and error tracking.
+
+**Features:**
+- **Dual progress tracking**: Simulation progress bar + win progress bar per agent
+- **Real-time LLM metrics**: Token usage, response times, invalid responses
+- **Error detection**: Distinguishes crashes from legitimate losses
+- **Interactive error log**: Toggle error panel to see failure details
+- **Result persistence**: Save results to CSV with 's' key
+- **Live ETA**: Time remaining estimation based on current progress
+- **Performance stats**: Full statistics tracking like CLI version
+
+**Basic Usage:**
+```bash
+python evaluation/tui_main.py <test_count> <thread_count> <scenario> <enemies> <bot1> [bot2 ...]
+```
+
+**Arguments:**
+- `test_count`: Number of simulations per bot
+- `thread_count`: Number of parallel threads
+- `scenario`: Scenario index (0-5)
+- `enemies`: Enemy configuration string (e.g., "h", "ghl")
+- `bot1`, `bot2`, etc.: Bot names to evaluate
+- `--dir <directory>`: Optional custom directory for saved results
+
+**Examples:**
+
+Quick test with fast bots:
+```bash
+python evaluation/tui_main.py 10 2 0 h rndm bt3 mcts
+```
+
+Compare LLM agents with metrics (requires API keys):
+```bash
+python evaluation/tui_main.py 25 4 0 h rcot-gpt41 cot-claude none-gemini mcts
+```
+
+GIGL random deck scenario with custom save directory:
+```bash
+python evaluation/tui_main.py 20 2 5 h rcot-gpt41 mcts bt5 rndm --dir my_results
+```
+
+**TUI Display:**
+```
+╔════════════════════════════════════════════════════════════════════════════╗
+║ Race: starter-ironclad | Enemies: h                                        ║
+╠════════════════════════════════════════════════════════════════════════════╣
+║ mcts (92/100)                                                               ║
+║ ▰▰▰▰▰▰▰▰▰▰ 25/25                                                           ║
+║ ██████████████████████████████ 22W/3L                                      ║
+║                                                                             ║
+║ rcot-gpt41 (76/100)                                                         ║
+║ ▰▰▰▰▰▰▰▰▰▰ 25/25 | 2 errors                                                ║
+║ ████████████████████░░░░░░░░░░ 18W/5L | 12,450 tokens | 2.3s avg          ║
+║                                                                             ║
+║ bt3 (45/100)                                                                ║
+║ ▰▰▰▰▰▰▰▰▰▰ 25/25                                                           ║
+║ ██████████░░░░░░░░░░░░░░░░░░░░ 12W/13L                                     ║
+╠════════════════════════════════════════════════════════════════════════════╣
+║ ✓ Race finished! 75 sims in 45.2s | 2 errors | Press 's' to save results  ║
+║ Press 'q' to quit | 's' to save | 'e' to toggle errors                     ║
+╚════════════════════════════════════════════════════════════════════════════╝
+```
+
+**Controls:**
+- `q`: Quit the TUI
+- `s`: Save results to CSV (includes full stats like CLI version)
+- `e`: Toggle error log panel to see crash details
+
+**Output Files (when saved):**
+Results saved to `evaluation_results/tui_<scenario>_enemies_<enemies>_<test_count>_<timestamp>/`
+- `results.csv`: Full results with columns: BotName, PlayerHealth, Win, TotalRequests, InvalidResponses, TotalTokens, AvgResponseTime, InvalidRate
+- `errors.csv`: Error log with bot name, simulation index, error details, and timestamp
+
+**Key Improvements over CLI:**
+- **Error visibility**: Errors shown in red with count, dedicated error panel
+- **LLM metrics**: Token counts and response times displayed per-bot in real-time
+- **Dual progress**: See both simulation progress (▰▰▰) and win progress (███)
+- **Live updates**: Watch stats change as each simulation completes
+- **ETA tracking**: Estimated time remaining based on actual performance
+- **Interactive**: Toggle error log, save results on demand
+
+**Notes:**
+- Progress bars use different characters: ▰/▱ for simulations, █/░ for wins
+- Errors (0 health + no LLM requests) highlighted in red
+- LLM agents show token usage, average response time, and invalid response count
+- Press 's' anytime to save partial results (useful for long runs)
+- Error panel shows timestamp and details for each crashed simulation
+- Compatible with all CSV analysis tools (plot_evaluation.py, generate_table_models.py)
+
+---
+
+### 5. Web UI Race Dashboard (`web_main.py`)
+
+A modern web-based dashboard for real-time agent evaluation with live WebSocket updates, multi-client support, and comprehensive race statistics.
+
+**Features:**
+- **Real-time WebSocket updates**: Live race progress streaming to all connected clients
+- **Multi-bot dashboard**: Track multiple agents simultaneously with visual progress bars
+- **LLM metrics display**: Token usage, response times, invalid responses
+- **REST API control**: Start races, check status, health monitoring
+- **Production-ready**: Static file serving, CORS support, async architecture
+- **Multi-client**: Multiple users can watch the same race in real-time
+
+**Setup:**
+
+Install backend dependencies:
+```bash
+cd evaluation/web/backend
+pip install -r requirements.txt
+```
+
+Install frontend dependencies and build:
+```bash
+cd evaluation/web/frontend
+npm install
+npm run build
+```
+
+**Running the Web Server:**
+
+Start the backend server:
+```bash
+cd evaluation/web/backend
+python web_main.py
+```
+
+Server endpoints:
+- **Web UI**: `http://localhost:8000`
+- **API Docs**: `http://localhost:8000/docs`
+- **Health Check**: `http://localhost:8000/api/health`
+- **WebSocket**: `ws://localhost:8000/socket.io`
+
+**Development Mode (Frontend Hot Reload):**
+
+Terminal 1 - Backend:
+```bash
+cd evaluation/web/backend
+python web_main.py
+```
+
+Terminal 2 - Frontend Dev Server:
+```bash
+cd evaluation/web/frontend
+npm run dev
+```
+
+Access frontend at `http://localhost:5173` with auto-reload on code changes.
+
+**Starting a Race:**
+
+Using curl:
+```bash
+curl -X POST http://localhost:8000/api/race/start \
+  -H "Content-Type: application/json" \
+  -d '{
+    "scenario": 0,
+    "enemies": "h",
+    "bot_names": ["mcts", "rcot-gpt41", "bt3"],
+    "test_count": 25,
+    "thread_count": 4
+  }'
+```
+
+Using Python requests:
+```python
+import requests
+
+response = requests.post('http://localhost:8000/api/race/start', json={
+    'scenario': 0,
+    'enemies': 'h',
+    'bot_names': ['mcts', 'rcot-gpt41', 'bt3', 'rndm'],
+    'test_count': 25,
+    'thread_count': 4
+})
+print(response.json())
+```
+
+**WebSocket Events:**
+
+The web UI automatically receives these events:
+
+Server → Client:
+- `race_started` - Race initialization with bot names and config
+- `racer_update` - Bot stats after each simulation (wins, losses, health, tokens)
+- `status_update` - Global progress, ETA, completion percentage
+- `error_logged` - Simulation crash details
+- `race_finished` - Final results and statistics
+
+Client → Server:
+- `request_race_status` - Request current race state
+
+**Example Race Configurations:**
+
+Quick test (fast bots):
+```json
+{
+  "scenario": 0,
+  "enemies": "h",
+  "bot_names": ["mcts", "bt3", "rndm"],
+  "test_count": 10,
+  "thread_count": 2
+}
+```
+
+LLM comparison (requires API keys):
+```json
+{
+  "scenario": 0,
+  "enemies": "h",
+  "bot_names": ["rcot-gpt41", "cot-claude", "none-gemini", "mcts"],
+  "test_count": 25,
+  "thread_count": 4
+}
+```
+
+GIGL random deck scenario:
+```json
+{
+  "scenario": 5,
+  "enemies": "h",
+  "bot_names": ["rcot-gpt41", "mcts", "bt5", "rndm"],
+  "test_count": 20,
+  "thread_count": 2
+}
+```
+
+**Architecture Overview:**
+
+```
+Frontend (React + Vite)
+  ↓ WebSocket (socket.io-client)
+Backend (FastAPI + Socket.IO)
+  ↓ RaceManager
+  ↓ Background Thread
+  ↓ joblib.Parallel
+  ↓ simulate_one() workers
+```
+
+**Key Components:**
+
+- **Frontend** (`evaluation/web/frontend/`):
+  - React 18 with hooks
+  - Socket.io-client for WebSocket
+  - React Router for navigation
+  - Vite for fast builds
+
+- **Backend** (`evaluation/web/backend/`):
+  - FastAPI for REST API
+  - python-socketio for WebSocket
+  - RaceManager for thread-safe state
+  - Integration with evaluate_bot.py
+
+**Output:**
+
+Results stored in RaceManager and broadcast via WebSocket:
+- All connected clients see live updates
+- Final results available via `/api/race/status` endpoint
+- Can be saved to CSV via custom endpoint (future enhancement)
+
+**Comparison with TUI:**
+
+| Feature | TUI | Web UI |
+|---------|-----|--------|
+| Interface | Terminal | Browser |
+| Multi-user | Single terminal session | Multiple concurrent clients |
+| Platform | Any terminal | Any browser |
+| Updates | Textual widget refresh | WebSocket push |
+| Control | Keyboard (q, s, e) | REST API |
+| Deployment | Local only | Can be hosted remotely |
+| Results | Save with 's' key | API endpoint |
+
+**Notes:**
+- Web server runs on port 8000 (configurable)
+- Frontend dev server runs on port 5173 (Vite default)
+- CORS enabled for development (restrict in production)
+- Uses same simulation backend as TUI and CLI
+- Compatible with all bot types and scenarios
+- Thread-safe for concurrent race execution
 
 ---
 ## Output Directory Structure
