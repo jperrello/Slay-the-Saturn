@@ -1,7 +1,7 @@
 from __future__ import annotations
-from value import Value, ConstValue
-from status_effecs import StatusEffectDefinition, strength_apply, vigor_apply, vulnerable_apply, weak_apply, vigor_after
-from utility import Event
+from core.value import Value, ConstValue
+from core.status_effecs import StatusEffectDefinition, strength_apply, vigor_apply, vulnerable_apply, weak_apply, vigor_after
+from utils.utility import Event
 from typing import TYPE_CHECKING
 from action.action import Action
 if TYPE_CHECKING:

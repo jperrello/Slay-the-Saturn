@@ -5,11 +5,11 @@ Originally part of the MiniSTS framework by iambb5445
 (https://github.com/iambb5445/MiniSTS).
 """
 from __future__ import annotations
-from base_agent import GGPA
+from bots.base_agent import GGPA
 from action.action import EndAgentTurn, PlayCard
 from typing import TYPE_CHECKING
 import random
-from config import Verbose
+from utils.config import Verbose
 if TYPE_CHECKING:
     from game import GameState
     from battle import BattleState

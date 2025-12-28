@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import StrEnum, Enum
-from config import MAX_STATUS
+from utils.config import MAX_STATUS
 from typing import Callable
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:

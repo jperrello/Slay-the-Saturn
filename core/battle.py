@@ -8,10 +8,10 @@ if TYPE_CHECKING:
     from game import GameState
     from card import Card
     from action.action import Action
-from config import MAX_MANA, Verbose
-from card import CardType
-from utility import get_unique_filename, Event
-from status_effecs import tolerance_after, bomb_after
+from utils.config import MAX_MANA, Verbose
+from core.card import CardType
+from utils.utility import get_unique_filename, Event
+from core.status_effecs import tolerance_after, bomb_after
 
 import random
 

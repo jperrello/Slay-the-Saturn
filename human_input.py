@@ -5,8 +5,8 @@ Originally part of the MiniSTS framework by iambb5445
 (https://github.com/iambb5445/MiniSTS).
 """
 from __future__ import annotations
-from utility import UserInput
-from base_agent import GGPA
+from utils.utility import UserInput
+from bots.base_agent import GGPA
 from action.action import EndAgentTurn, PlayCard
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:

@@ -2,7 +2,7 @@ from __future__ import annotations
 import random
 import math
 from typing import TYPE_CHECKING
-from base_agent import GGPA
+from bots.base_agent import GGPA
 from action.action import EndAgentTurn, PlayCard
 
 if TYPE_CHECKING:

@@ -18,11 +18,11 @@ current_dir = Path(__file__).resolve().parent
 parent_dir = current_dir.parent
 sys.path.append(str(parent_dir))
 
-from game import GameState
-from battle import BattleState
-from agent import Enemy
-from card import Card
-from config import Character, Verbose
+from core.game import GameState
+from core.battle import BattleState
+from bots.agent import Enemy
+from core.card import Card
+from utils.config import Character, Verbose
 from evaluation.evaluate_bot import name_to_bot, get_scenario, get_enemies, simulate_one
 
 

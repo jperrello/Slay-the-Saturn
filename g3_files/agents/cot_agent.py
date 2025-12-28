@@ -8,10 +8,10 @@ from openai import OpenAI
 import os
 import re
 
-from base_agent import GGPA
-from prompt_utils import get_agent_target_prompt, get_card_target_prompt
+from bots.base_agent import GGPA
+from utils.prompt_utils import get_agent_target_prompt, get_card_target_prompt
 from action.action import EndAgentTurn, PlayCard
-from auth import OPENROUTER_API_KEY
+from utils.auth import OPENROUTER_API_KEY
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from saturn_discovery import get_saturn_server

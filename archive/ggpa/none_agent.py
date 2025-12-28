@@ -1,7 +1,7 @@
 from __future__ import annotations
 from ggpa.ggpa import GGPA
 from action.action import EndAgentTurn, PlayCard
-from config import CardType
+from utils.config import CardType
 from typing import TYPE_CHECKING
 import random
 

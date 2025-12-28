@@ -1,13 +1,13 @@
-from game import GameState
-from battle import BattleState
-from config import Character, Verbose
-from agent import AcidSlimeSmall, SpikeSlimeSmall, JawWorm
-from card import CardGen, CardRepo
+from core.game import GameState
+from core.battle import BattleState
+from utils.config import Character, Verbose
+from bots.agent import AcidSlimeSmall, SpikeSlimeSmall, JawWorm
+from core.card import CardGen, CardRepo
 import time
 from human_input import HumanInput
 from ggpa.chatgpt_bot import ChatGPTBot
-from prompt_utils import PromptOption
-from backtrack import BacktrackBot
+from utils.prompt_utils import PromptOption
+from bots.backtrack import BacktrackBot
 # from ggpa.backtrack_parallel import BacktrackParallelBot # Removed as file missing in upload
 from ggpa.none_agent import NoneAgent
 from ggpa.basic_agent import BasicAgent

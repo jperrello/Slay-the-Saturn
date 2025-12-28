@@ -3,7 +3,7 @@ from ggpa.ggpa import GGPA
 from action.action import EndAgentTurn, PlayCard
 from typing import TYPE_CHECKING
 import random
-from config import Verbose
+from utils.config import Verbose
 if TYPE_CHECKING:
     from game import GameState
     from battle import BattleState

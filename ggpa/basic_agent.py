@@ -1,6 +1,6 @@
 from __future__ import annotations
 from ggpa.chatgpt_bot import ChatGPTBot
-from prompt_utils import PromptOption
+from utils.prompt_utils import PromptOption
 
 class BasicAgent(ChatGPTBot):
 

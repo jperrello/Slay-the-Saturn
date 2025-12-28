@@ -1,5 +1,5 @@
 from __future__ import annotations
-from value import Value
+from core.value import Value
 from action.action import Action
 import copy
 from target.card_target import CardTarget, CardPile

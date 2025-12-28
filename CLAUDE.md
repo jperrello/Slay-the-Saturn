@@ -12,6 +12,86 @@ bd close <id>         # Complete work
 bd sync               # Sync with git
 ```
 
+## MCP Agent Mail (Multi-Agent Coordination)
+
+**Agent Mail is available for coordinating work across multiple agents or sessions.** See `AGENT_MAIL.md` for full documentation.
+
+### When to Use Agent Mail
+
+Use agent mail when:
+- Working on tasks that span multiple agents (frontend + backend, etc.)
+- Coordinating file edits to prevent conflicts
+- Passing context between sessions
+- Documenting decisions for future agents
+- Managing complex multi-step workflows
+
+### Quick Start
+
+**Check if server is running:**
+```bash
+curl -s http://127.0.0.1:8765/mcp/ > /dev/null && echo "Server running" || echo "Server not running"
+```
+
+**Start the server (if not running):**
+```bash
+.\start-agent-mail.bat  # Windows
+./start-agent-mail.sh   # Linux/Mac
+```
+
+**Web UI:** `http://127.0.0.1:8765/mail`
+
+### Available MCP Tools
+
+Once the server is running, you have access to these tools via MCP:
+
+**Agent Management:**
+- `agent_register` - Register a new agent identity (e.g., "BeadsBackend", "TestRunner")
+- `agent_list` - List all registered agents
+- `agent_get_identity` - Get agent details
+
+**Messaging:**
+- `message_send` - Send a message to another agent
+- `message_list_inbox` - Check your inbox
+- `message_list_outbox` - See sent messages
+- `message_search` - Search message history
+- `message_get_thread` - Get full conversation thread
+
+**File Coordination:**
+- `file_reserve` - Reserve a file before editing (prevents conflicts)
+- `file_release` - Release a file reservation
+- `file_list_reservations` - See what files are reserved
+
+**Contact Management:**
+- `contact_set_policy` - Set message policy (open/auto/contacts_only/block_all)
+- `contact_add` - Add to contacts
+- `contact_list` - List contacts
+
+### Example Workflow
+
+When asked to "use agent mail" or coordinate with other agents:
+
+1. **Check if server is running** (use curl check above)
+2. **Register your agent identity** if not already registered
+3. **Reserve files** before editing to signal intent
+4. **Send messages** to coordinate with other agents
+5. **Release files** when done editing
+6. **Check inbox** for messages from other agents
+
+### Integration with Beads
+
+Agent mail complements beads workflow:
+- Use beads for issue tracking and task breakdown
+- Use agent mail for real-time coordination and file conflicts
+- All agent mail data is Git-backed in `.agent_mail_storage/`
+
+**Example:**
+```
+bd show BD-42  # View beads issue
+# Register agent, reserve files, coordinate work
+# Update beads issue status as work progresses
+bd close BD-42  # Close when complete
+```
+
 ## Landing the Plane (Session Completion)
 
 **When ending a work session (user says "land the plane")**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
@@ -135,7 +215,7 @@ All modern LLM agents (CoT, RCoT, None) automatically discover and use Saturn at
 - **Discovery returns**: `http://IP:PORT` (base URL only, from mDNS TXT record)
 - **Agent configures**: `base_url=f"{saturn_url}/v1"` (OpenAI SDK appends `/chat/completions`)
 - **Final request URL**: `http://IP:PORT/v1/chat/completions` (matches Saturn endpoint)
-- **Saturn forwards to**: `OPENROUTER_BASE_URL` from `.env` (must include `/chat/completions`)
+
 
 **Priority Handling:**
 - Multiple Saturn servers can exist on network
@@ -148,5 +228,3 @@ All modern LLM agents (CoT, RCoT, None) automatically discover and use Saturn at
 - Discovery logic: `saturn_discovery.py:39-63`
 - Priority selection: `saturn_discovery.py:62` (uses `min()` on priority)
 - Deduplication: `saturn_discovery.py:190-207`
-
-REMEMBER TO ALWAYS PUSH

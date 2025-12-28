@@ -1,5 +1,5 @@
 from __future__ import annotations
-from value import Value
+from core.value import Value
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from battle import BattleState

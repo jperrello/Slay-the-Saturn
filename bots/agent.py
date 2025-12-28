@@ -1,13 +1,13 @@
 from __future__ import annotations
 from action.action import Action
-from config import Character, MAX_HEALTH
-from value import RandomUniformRange, ConstValue
-from utility import RoundRobin, RoundRobinRandomStart, ItemSet, ItemSequence, RandomizedItemSet, PreventRepeats
+from utils.config import Character, MAX_HEALTH
+from core.value import RandomUniformRange, ConstValue
+from utils.utility import RoundRobin, RoundRobinRandomStart, ItemSet, ItemSequence, RandomizedItemSet, PreventRepeats
 from action.action import EndAgentTurn
 from action.agent_targeted_action import DealAttackDamage, AddBlock, ApplyStatus
 from target.agent_target import PlayerAgentTarget, SelfAgentTarget
-from config import MAX_BLOCK, CHARACTER_NAME
-from status_effecs import StatusEffectState, StatusEffectRepo
+from utils.config import MAX_BLOCK, CHARACTER_NAME
+from core.status_effecs import StatusEffectState, StatusEffectRepo
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from battle import BattleState

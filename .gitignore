@@ -212,5 +212,9 @@ __marimo__/
 # Node.js
 node_modules/
 
+# MCP Agent Mail
+mcp_agent_mail/
+.agent_mail_storage/
+
 # Windows reserved device names
 nul

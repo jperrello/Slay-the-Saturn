@@ -24,7 +24,7 @@ import threading
 from race_manager import RaceManager
 from evaluate_bot import name_to_bot, get_scenario, get_enemies, simulate_one
 from evaluate_bot import Verbose
-from game import GameState
+from core.game import GameState
 from joblib import Parallel, delayed
 
 sio = socketio.AsyncServer(

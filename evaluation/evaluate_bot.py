@@ -10,16 +10,16 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
-from game import GameState
-from battle import BattleState
-from config import Character, Verbose
-from agent import AcidSlimeSmall, SpikeSlimeSmall, JawWorm, Goblin, HobGoblin, Leech, Enemy
-from card import CardGen, Card, CardRepo
-from base_agent import GGPA
-from random_bot import RandomBot
-from backtrack import BacktrackBot
+from core.game import GameState
+from core.battle import BattleState
+from utils.config import Character, Verbose
+from bots.agent import AcidSlimeSmall, SpikeSlimeSmall, JawWorm, Goblin, HobGoblin, Leech, Enemy
+from core.card import CardGen, Card, CardRepo
+from bots.base_agent import GGPA
+from bots.random_bot import RandomBot
+from bots.backtrack import BacktrackBot
 from ggpa.chatgpt_bot import ChatGPTBot
-from prompt_utils import PromptOption
+from utils.prompt_utils import PromptOption
 from ggpa.basic_agent import BasicAgent
 from g3_files.agents.mcts_bot import MCTSAgent
 from g3_files.agents.rcot_agent import RCotAgent, RCotConfig

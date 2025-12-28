@@ -3,9 +3,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from card import Card
     from ggpa.ggpa import GGPA
-from agent import Player
-from config import Character
-from card import CardRepo
+from bots.agent import Player
+from utils.config import Character
+from core.card import CardRepo
 
 class GameState:
     def __init__(self, character: Character, bot: GGPA, ascention: int):

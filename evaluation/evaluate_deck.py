@@ -8,13 +8,13 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
-from game import GameState
-from battle import BattleState
-from config import Character, Verbose, CardType, Rarity
-from agent import AcidSlimeSmall, SpikeSlimeSmall, JawWorm
-from card import CardGen, Card
-from backtrack import BacktrackBot
-from value import ConstValue, UpgradableOnce
+from core.game import GameState
+from core.battle import BattleState
+from utils.config import Character, Verbose, CardType, Rarity
+from bots.agent import AcidSlimeSmall, SpikeSlimeSmall, JawWorm
+from core.card import CardGen, Card
+from bots.backtrack import BacktrackBot
+from core.value import ConstValue, UpgradableOnce
 from action.agent_targeted_action import DealAttackDamage
 from target.agent_target import ChooseAgentTarget, AgentSet, AllAgentsTarget
 

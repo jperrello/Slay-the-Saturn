@@ -4,10 +4,10 @@ from target.card_target import CardPile, SelfCardTarget, ChooseCardTarget
 from action.action import Action, AddMana
 from action.agent_targeted_action import DealAttackDamage, ApplyStatus, AddBlock, Heal
 from action.card_targeted_action import CardTargetedL1, Exhaust, AddCopy, UpgradeCard, DiscardCard
-from config import CardType, Character, Rarity
-from status_effecs import StatusEffectRepo, StatusEffectDefinition
-from value import Value, ConstValue, UpgradableOnce, LinearUpgradable
-from utility import RandomStr
+from utils.config import CardType, Character, Rarity
+from core.status_effecs import StatusEffectRepo, StatusEffectDefinition
+from core.value import Value, ConstValue, UpgradableOnce, LinearUpgradable
+from utils.utility import RandomStr
 from typing import TYPE_CHECKING, Callable
 import json
 if TYPE_CHECKING:

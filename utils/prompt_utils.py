@@ -7,7 +7,7 @@ language-driven play research.
 """
 from __future__ import annotations
 from enum import Enum
-from config import Verbose
+from utils.config import Verbose
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from game import GameState

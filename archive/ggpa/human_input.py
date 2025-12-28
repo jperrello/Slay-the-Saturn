@@ -1,5 +1,5 @@
 from __future__ import annotations
-from utility import UserInput
+from utils.utility import UserInput
 from ggpa.ggpa import GGPA
 from action.action import EndAgentTurn, PlayCard
 from typing import TYPE_CHECKING

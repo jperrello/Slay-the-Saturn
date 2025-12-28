@@ -6,7 +6,7 @@ Originally part of the MiniSTS framework by iambb5445
 """
 from __future__ import annotations
 import random
-from base_agent import GGPA
+from bots.base_agent import GGPA
 from action.action import EndAgentTurn, PlayCard
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
