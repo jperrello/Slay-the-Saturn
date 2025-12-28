@@ -3,6 +3,15 @@ import { useState, useEffect } from 'react'
 import { io } from 'socket.io-client'
 import './App.css'
 
+const SCENARIO_DESCRIPTIONS = {
+  0: 'Starter Ironclad: 5 Strikes, 4 Defends, 1 Bash',
+  1: 'Basics Batter Stimulate: 5 Strikes, 4 Defends, Batter, Stimulate',
+  2: 'Tolerate: 1 Strike, 3 Defends, Tolerate',
+  3: 'Basics Bomb: 5 Strikes, 4 Defends, Bomb',
+  4: 'Basics Suffer: 5 Strikes, 4 Defends, Suffer',
+  5: 'GIGL Random Deck: 20 random GIGL generated cards'
+}
+
 function App() {
   const [socket, setSocket] = useState(null)
   const [isConnected, setIsConnected] = useState(false)
@@ -317,6 +326,7 @@ function RaceMonitor({ socket }) {
                 name="scenario"
                 value={formData.scenario}
                 onChange={handleFormChange}
+                title={SCENARIO_DESCRIPTIONS[formData.scenario]}
               >
                 <option value="0">0: starter-ironclad</option>
                 <option value="1">1: basics-batter-stimulate</option>
@@ -325,6 +335,9 @@ function RaceMonitor({ socket }) {
                 <option value="4">4: basics-suffer</option>
                 <option value="5">5: gigl-random-deck</option>
               </select>
+              <div className="form-help">
+                {SCENARIO_DESCRIPTIONS[formData.scenario]}
+              </div>
             </div>
 
             <div className="form-group">
@@ -336,7 +349,11 @@ function RaceMonitor({ socket }) {
                 value={formData.enemies}
                 onChange={handleFormChange}
                 placeholder="e.g., h, ghl, j"
+                title="h=HobGoblin, g=Goblin, l=Leech, j=JawWorm, s=SimpleEnemy, b=Bomber"
               />
+              <div className="form-help">
+                h=HobGoblin • g=Goblin • l=Leech • j=JawWorm • s=SimpleEnemy • b=Bomber
+              </div>
             </div>
 
             <div className="form-group">
