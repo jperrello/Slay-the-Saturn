@@ -12,6 +12,8 @@ class RacerStats:
     losses: int = 0
     errors: int = 0
     simulations_complete: int = 0
+    total_simulations: int = 0
+    current_health: int = 0
     total_health: int = 0
     avg_health: float = 0.0
     total_requests: int = 0
@@ -20,11 +22,15 @@ class RacerStats:
     total_response_time: float = 0.0
     avg_response_time: float = 0.0
     invalid_rate: float = 0.0
+    total_execution_time: float = 0.0
+    avg_execution_time: float = 0.0
 
     def update_from_simulation(self, health: int, won: bool, total_requests: int,
                                invalid_responses: int, total_tokens: int,
-                               avg_response_time: float, invalid_rate: float):
+                               avg_response_time: float, invalid_rate: float,
+                               execution_time: float = 0.0):
         self.simulations_complete += 1
+        self.current_health = health
         self.total_health += health
         self.avg_health = self.total_health / self.simulations_complete
 
@@ -39,9 +45,11 @@ class RacerStats:
         self.invalid_responses += invalid_responses
         self.total_tokens += total_tokens
         self.total_response_time += avg_response_time
+        self.total_execution_time += execution_time
 
         if self.simulations_complete > 0:
             self.avg_response_time = self.total_response_time / self.simulations_complete
+            self.avg_execution_time = self.total_execution_time / self.simulations_complete
             if self.total_requests > 0:
                 self.invalid_rate = (self.invalid_responses / self.total_requests) * 100
 
@@ -65,7 +73,7 @@ class RaceState:
 
     def __post_init__(self):
         self.total_sims = self.test_count * len(self.bot_names)
-        self.racers = {name: RacerStats(bot_name=name) for name in self.bot_names}
+        self.racers = {name: RacerStats(bot_name=name, total_simulations=self.test_count) for name in self.bot_names}
         self.start_time = time.time()
 
     def get_elapsed_time(self) -> float:
@@ -88,11 +96,11 @@ class RaceState:
 
     def update_racer(self, bot_name: str, health: int, won: bool, total_requests: int,
                     invalid_responses: int, total_tokens: int, avg_response_time: float,
-                    invalid_rate: float):
+                    invalid_rate: float, execution_time: float = 0.0):
         if bot_name in self.racers:
             self.racers[bot_name].update_from_simulation(
                 health, won, total_requests, invalid_responses,
-                total_tokens, avg_response_time, invalid_rate
+                total_tokens, avg_response_time, invalid_rate, execution_time
             )
             self.completed_sims += 1
 
@@ -146,14 +154,14 @@ class RaceManager:
 
     def update_racer(self, bot_name: str, health: int, won: bool, total_requests: int,
                     invalid_responses: int, total_tokens: int, avg_response_time: float,
-                    invalid_rate: float, sim_index: int):
+                    invalid_rate: float, sim_index: int, execution_time: float = 0.0):
         if self.current_race is None:
             return
 
         with self.lock:
             self.current_race.update_racer(
                 bot_name, health, won, total_requests, invalid_responses,
-                total_tokens, avg_response_time, invalid_rate
+                total_tokens, avg_response_time, invalid_rate, execution_time
             )
 
             result = {

@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import csv
 import io
+import time
 
 project_root = Path(__file__).parent.parent.parent.parent
 evaluation_dir = project_root / 'evaluation'
@@ -191,8 +192,14 @@ def run_race_simulations(race_manager: RaceManager, bot_names: List[str], deck: 
         ) for i in range(test_count * len(bots))
     ]
 
+    sim_start_times = {}
+    
     with Parallel(n_jobs=thread_count, backend='threading', return_as='generator') as parallel:
         for idx, result in enumerate(parallel(sim_tasks)):
+            sim_end_time = time.time()
+            sim_start_time = sim_start_times.get(idx, race_manager.current_race.start_time)
+            execution_time = sim_end_time - sim_start_time
+            
             bot_name, health, won, total_requests, invalid_responses, total_tokens, avg_response_time, invalid_rate, error_msg = result
 
             bot_idx = idx // test_count
@@ -210,8 +217,11 @@ def run_race_simulations(race_manager: RaceManager, bot_names: List[str], deck: 
                 total_tokens=total_tokens,
                 avg_response_time=avg_response_time,
                 invalid_rate=invalid_rate,
-                sim_index=idx
+                sim_index=idx,
+                execution_time=execution_time
             )
+            
+            sim_start_times[idx + 1] = sim_end_time
 
     race_manager.finish_race()
 
