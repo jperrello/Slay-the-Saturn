@@ -63,6 +63,142 @@ python evaluation/tui_main.py 10 2 0 h rndm bt3 mcts
 python evaluation/tui_main.py 5 4 0 h rcot-gpt41 cot-claude mcts
 ```
 
+### 5. Web UI Race Dashboard (`web_main.py`)
+
+A modern web-based dashboard for real-time agent evaluation with live WebSocket updates, multi-client support, and comprehensive race statistics.
+
+**Features:**
+- Real-time WebSocket updates for all connected clients
+- Multi-bot dashboard with live metrics (tokens, response times, error counts)
+- Race configuration form with input validation
+- Collapsible error log panel for debugging
+- CSV result download
+- Dark theme UI suitable for extended use
+- Responsive design (works on desktop, tablet, mobile)
+
+**Setup:**
+
+Install dependencies:
+```bash
+# Backend
+cd evaluation/web/backend
+pip install -r requirements.txt
+
+# Frontend
+cd evaluation/web/frontend
+npm install
+npm run build
+```
+
+**Start the server:**
+
+Production mode (recommended):
+```bash
+python evaluation/web/backend/web_main.py
+
+# Access at: http://localhost:8000
+```
+
+Development mode (with frontend auto-reload):
+
+Terminal 1:
+```bash
+python evaluation/web/backend/web_main.py
+```
+
+Terminal 2:
+```bash
+cd evaluation/web/frontend
+npm run dev
+
+# Access at: http://localhost:5173
+```
+
+**Starting a Race from Web UI:**
+
+1. Navigate to http://localhost:8000
+2. Go to "Race Monitor" tab
+3. Configure race parameters:
+   - Select scenario (0-5)
+   - Enter enemies (e.g., "h", "ghl")
+   - Enter bot names (comma-separated, e.g., "mcts,bt3,rndm")
+   - Set test count and thread count
+4. Click "Start Race"
+5. Watch live progress updates
+6. Toggle "Errors" panel to view any simulation errors
+7. Download results as CSV when finished
+
+**Starting a Race via API:**
+
+```bash
+curl -X POST http://localhost:8000/api/race/start \
+  -H "Content-Type: application/json" \
+  -d '{
+    "scenario": 0,
+    "enemies": "h",
+    "bot_names": ["mcts", "rndm", "bt3"],
+    "test_count": 25,
+    "thread_count": 4
+  }'
+```
+
+**Example Configurations:**
+
+Quick test (fast bots):
+```
+Scenario: 0
+Enemies: h
+Bots: mcts,rndm
+Test Count: 10
+Thread Count: 2
+```
+
+LLM comparison (requires API keys):
+```
+Scenario: 0
+Enemies: h
+Bots: rcot-gpt41,cot-claude,none-gemini,mcts
+Test Count: 25
+Thread Count: 4
+```
+
+GIGL random deck:
+```
+Scenario: 5
+Enemies: h
+Bots: rcot-gpt41,mcts,bt5
+Test Count: 20
+Thread Count: 2
+```
+
+**Web UI vs TUI vs CLI Comparison:**
+
+| Feature | Web UI | TUI | CLI |
+|---------|--------|-----|-----|
+| Real-time UI | WebSocket | Terminal | Text output only |
+| Multi-client | Yes | No | No |
+| Browser required | Yes | No | No |
+| Mobile support | Yes | No | No |
+| Setup complexity | Medium | Simple | Simple |
+| Remote access | Yes | No | No |
+| Error visualization | Panel | Toggle key | Raw logs |
+
+**API Endpoints:**
+
+- `POST /api/race/start` - Start new race
+- `GET /api/race/status` - Get current race status
+- `GET /api/race/download` - Download results as CSV
+- `GET /api/health` - Health check
+
+See `evaluation/web/README.md` for full API documentation.
+
+**Troubleshooting:**
+
+- Port 8000 already in use? Change `uvicorn.run(port=8001)` in web_main.py
+- Frontend not loading? Rebuild: `cd evaluation/web/frontend && npm run build`
+- WebSocket connection failing? Check browser console (F12) for CORS/network errors
+- Race won't start? Check error message in red box - form validation will show issues
+
 ## Saturn mDNS Integration
 
 Saturn is a local OpenRouter API proxy that allows you to route LLM API calls through a local server. The system uses mDNS (DNS Service Discovery) to automatically find Saturn servers on your local network.
