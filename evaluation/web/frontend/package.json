@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:gh-pages": "node build-gh-pages.js",
     "preview": "vite preview"
   },
   "dependencies": {

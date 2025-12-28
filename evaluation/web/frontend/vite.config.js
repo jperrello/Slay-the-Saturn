@@ -4,8 +4,9 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
+  base: process.env.VITE_BASE_URL || '/',
   build: {
-    outDir: '../static',
+    outDir: process.env.VITE_BUILD_DIR || '../static',
     emptyOutDir: true,
   },
   server: {

@@ -269,7 +269,7 @@ def main():
     assert isinstance(results_dataset, list), "Parallel jobs have not resulted in an output of type list"
     df = pd.DataFrame(
         results_dataset,
-        columns=["BotName", "PlayerHealth", "Win", "TotalRequests", "InvalidResponses", "TotalTokens", "AvgResponseTime", "InvalidRate"]
+        columns=["BotName", "PlayerHealth", "Win", "TotalRequests", "InvalidResponses", "TotalTokens", "AvgResponseTime", "InvalidRate", "Error"]
     )
     df.to_csv(os.path.join(path, f"results.csv"), index=False)
     if time_execution:
