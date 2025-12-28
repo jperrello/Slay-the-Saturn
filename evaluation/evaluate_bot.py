@@ -206,15 +206,18 @@ def simulate_one(index: int, bot: GGPA, deck: list[Card], enemies: str, path: st
             stats.get('invalid_responses', 0),
             stats.get('total_tokens', 0),
             stats.get('avg_response_time', 0.0),
-            stats.get('invalid_rate', 0.0)
+            stats.get('invalid_rate', 0.0),
+            None  # No error
         ]
     except Exception as e:
-        # Convert exceptions to picklable format for joblib
-        # API errors from OpenAI, Anthropic, etc. can't be pickled properly
+        import traceback
+        # Capture full exception info as picklable string
         error_msg = f"{type(e).__name__}: {str(e)}"
-        print(f"Error in simulation {index} for {bot.name}: {error_msg}")
-        # Return a loss result with 0 health when an error occurs, this prrevents subsequent test failing
-        return [bot.name, 0, False, 0, 0, 0, 0.0, 0.0]
+        stack_trace = traceback.format_exc()
+        full_error = f"{error_msg}\n{stack_trace}"
+        print(f"Error in simulation {index} for {bot.name}:\n{full_error}")
+        # Return a loss result with error information
+        return [bot.name, 0, False, 0, 0, 0, 0.0, 0.0, full_error]
 
 def main():
     parser = argparse.ArgumentParser()

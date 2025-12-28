@@ -151,9 +151,6 @@ class RaceManager:
             return
 
         with self.lock:
-            if health == 0 and not won and total_requests == 0:
-                self.current_race.log_error(bot_name, sim_index, "Simulation crashed (0 health, 0 requests)")
-
             self.current_race.update_racer(
                 bot_name, health, won, total_requests, invalid_responses,
                 total_tokens, avg_response_time, invalid_rate

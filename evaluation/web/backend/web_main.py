@@ -151,7 +151,7 @@ def run_race_simulations(race_manager: RaceManager, bot_names: List[str], deck: 
     race_manager.start_race(
         scenario_name=scenario_name,
         enemies_str=enemies_str,
-        bot_names=bot_names,
+        bot_names=[bot.name for bot in bots],
         test_count=test_count,
         thread_count=thread_count
     )
@@ -169,10 +169,13 @@ def run_race_simulations(race_manager: RaceManager, bot_names: List[str], deck: 
 
     with Parallel(n_jobs=thread_count, backend='threading', return_as='generator') as parallel:
         for idx, result in enumerate(parallel(sim_tasks)):
-            bot_name, health, won, total_requests, invalid_responses, total_tokens, avg_response_time, invalid_rate = result
+            bot_name, health, won, total_requests, invalid_responses, total_tokens, avg_response_time, invalid_rate, error_msg = result
 
             bot_idx = idx // test_count
             sim_num = (idx % test_count) + 1
+
+            if error_msg:
+                race_manager.log_error(bot_name, idx, error_msg)
 
             race_manager.update_racer(
                 bot_name=bot_name,
