@@ -80,6 +80,9 @@ function RaceMonitor({ socket }) {
   const [raceData, setRaceData] = useState(null)
   const [showForm, setShowForm] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState(null)
+  const [errors, setErrors] = useState([])
+  const [showErrorPanel, setShowErrorPanel] = useState(false)
   const [formData, setFormData] = useState({
     scenario: '0',
     enemies: 'h',
@@ -125,6 +128,14 @@ function RaceMonitor({ socket }) {
 
     socket.on('error_logged', (data) => {
       console.error('Simulation error:', data)
+      const timestamp = new Date().toLocaleTimeString()
+      const errorEntry = {
+        timestamp,
+        bot_name: data.bot_name || 'Unknown',
+        sim_num: data.sim_index || 0,
+        error_message: data.error_msg || 'Unknown error'
+      }
+      setErrors(prev => [...prev, errorEntry])
     })
 
     return () => {
@@ -143,11 +154,68 @@ function RaceMonitor({ socket }) {
     }))
   }
 
+  const validateFormData = () => {
+    const errors = []
+
+    // Validate scenario
+    const scenario = parseInt(formData.scenario)
+    if (isNaN(scenario) || scenario < 0 || scenario > 5) {
+      errors.push('Scenario must be between 0 and 5')
+    }
+
+    // Validate enemies string
+    if (!formData.enemies || formData.enemies.trim() === '') {
+      errors.push('Enemies field cannot be empty')
+    } else if (!/^[hgljsb]+$/.test(formData.enemies)) {
+      errors.push('Enemies must contain only: h (HobGoblin), g (Goblin), l (Leech), j (JawWorm), s (SimpleEnemy), b (Bomber)')
+    }
+
+    // Validate bot names
+    const botNames = formData.bot_names.split(',').map(b => b.trim()).filter(b => b !== '')
+    if (botNames.length === 0) {
+      errors.push('At least one bot name is required')
+    } else if (botNames.some(name => name === '')) {
+      errors.push('Bot names cannot contain empty values')
+    }
+
+    // Validate test count
+    const testCount = parseInt(formData.test_count)
+    if (isNaN(testCount) || testCount < 1) {
+      errors.push('Test count must be a positive integer (minimum 1)')
+    } else if (testCount > 1000) {
+      errors.push('Test count is too high (maximum 1000)')
+    }
+
+    // Validate thread count
+    const threadCount = parseInt(formData.thread_count)
+    if (isNaN(threadCount) || threadCount < 1) {
+      errors.push('Thread count must be a positive integer (minimum 1)')
+    } else if (threadCount > 64) {
+      errors.push('Thread count is too high (maximum 64)')
+    }
+
+    return errors
+  }
+
   const handleStartRace = async (e) => {
     e.preventDefault()
+    
+    // Clear any previous errors
+    setErrorMessage(null)
+    
+    // Validate form data
+    const errors = validateFormData()
+    if (errors.length > 0) {
+      setErrorMessage('Validation errors:\n\n' + errors.join('\n'))
+      return
+    }
+
     setIsLoading(true)
     
     try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+      
       const response = await fetch('http://localhost:8000/api/race/start', {
         method: 'POST',
         headers: {
@@ -159,18 +227,39 @@ function RaceMonitor({ socket }) {
           bot_names: formData.bot_names.split(',').map(b => b.trim()),
           test_count: parseInt(formData.test_count),
           thread_count: parseInt(formData.thread_count)
-        })
+        }),
+        signal: controller.signal
       })
       
+      clearTimeout(timeoutId)
+      
       if (!response.ok) {
-        throw new Error(`Failed to start race: ${response.statusText}`)
+        let errorText = `HTTP ${response.status}: ${response.statusText}`
+        try {
+          const errorData = await response.json()
+          if (errorData.detail) {
+            errorText = errorData.detail
+          }
+        } catch (e) {
+          // If response is not JSON, use the default error text
+        }
+        throw new Error(errorText)
       }
       
       const data = await response.json()
       console.log('Race started:', data)
+      setErrorMessage(null)
     } catch (error) {
       console.error('Error starting race:', error)
-      alert(`Error: ${error.message}`)
+      let errorMsg = error.message
+      
+      if (error.name === 'AbortError') {
+        errorMsg = 'Request timed out. The server may be overloaded.'
+      } else if (!navigator.onLine) {
+        errorMsg = 'No internet connection. Please check your network.'
+      }
+      
+      setErrorMessage(`Error: ${errorMsg}`)
       setIsLoading(false)
     }
   }
@@ -202,6 +291,21 @@ function RaceMonitor({ socket }) {
     <div className="RaceMonitor">
       <h2>Race Monitor</h2>
       
+      {errorMessage && (
+        <div className="error-message">
+          <div className="error-content">
+            <strong>Error:</strong> {errorMessage}
+            <button 
+              className="error-close" 
+              onClick={() => setErrorMessage(null)}
+              aria-label="Close error message"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       {showForm && (
         <div className="race-form">
           <h3>Start a New Race</h3>
@@ -273,8 +377,20 @@ function RaceMonitor({ socket }) {
               </div>
             </div>
 
-            <button type="submit" disabled={isLoading} className="start-button">
-              {isLoading ? 'Starting...' : 'Start Race'}
+            <button 
+              type="submit" 
+              disabled={isLoading || validateFormData().length > 0} 
+              className="start-button"
+              title={validateFormData().length > 0 ? validateFormData()[0] : 'Click to start the race'}
+            >
+              {isLoading ? (
+                <>
+                  <span className="spinner"></span>
+                  Starting Race...
+                </>
+              ) : (
+                'Start Race'
+              )}
             </button>
           </form>
         </div>
@@ -333,6 +449,43 @@ function RaceMonitor({ socket }) {
         <p className="no-race">No active race. Fill out the form to start a race.</p>
       )}
 
+      {racers.length > 0 && (
+        <div className="error-panel-toggle">
+          <button 
+            onClick={() => setShowErrorPanel(!showErrorPanel)}
+            className="toggle-errors-button"
+          >
+            {showErrorPanel ? '▼' : '▶'} Errors ({errors.length})
+          </button>
+        </div>
+      )}
+
+      {showErrorPanel && errors.length > 0 && (
+        <div className="error-panel">
+          <div className="error-panel-header">
+            <h3>Simulation Errors</h3>
+            <div className="error-panel-actions">
+              <button 
+                onClick={() => setErrors([])}
+                className="clear-errors-button"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+          <div className="error-panel-content">
+            {errors.map((error, idx) => (
+              <div key={idx} className="error-entry">
+                <span className="error-timestamp">[{error.timestamp}]</span>
+                <span className="error-bot">{error.bot_name}</span>
+                <span className="error-sim">sim #{error.sim_num}:</span>
+                <span className="error-message">{error.error_message}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {raceStatus === 'finished' && (
         <div className="race-actions">
           <button onClick={handleDownloadCSV} className="download-button">
@@ -343,6 +496,8 @@ function RaceMonitor({ socket }) {
             setRaceStatus('idle')
             setRacers([])
             setRaceData(null)
+            setErrors([])
+            setShowErrorPanel(false)
           }} className="new-race-button">
             Start New Race
           </button>
