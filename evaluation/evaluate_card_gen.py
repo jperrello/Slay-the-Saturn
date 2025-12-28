@@ -202,7 +202,7 @@ def main():
     os.makedirs(path)
     print(f'simulating {test_count} times each for {gen_count} cards - {thread_count} threads')
     print(f'results can be found at {path}')
-    results_dataset = Parallel(n_jobs=thread_count)(delayed(simulate_one)(i, bot,
+    results_dataset = Parallel(n_jobs=thread_count, backend='loky')(delayed(simulate_one)(i, bot,
                         None if cards[i//test_count] is None else [cards[i//test_count]()],
                         CardRepo.anonymize_deck(CardRepo.get_basics()), enemies, path, verbose
                         ) for i in tqdm(range(test_count * len(cards))))

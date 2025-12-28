@@ -357,7 +357,7 @@ class RaceTUI(App):
             ) for i in range(self.test_count * len(bots))
         ]
 
-        with Parallel(n_jobs=self.thread_count, backend='threading', return_as='generator') as parallel:
+        with Parallel(n_jobs=self.thread_count, backend='loky', return_as='generator') as parallel:
             for idx, result in enumerate(parallel(sim_tasks)):
                 if self.stop_event.is_set():
                     break

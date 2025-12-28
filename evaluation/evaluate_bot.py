@@ -255,13 +255,13 @@ def main():
     print(f'simulating {test_count} times, for {bot_names} - {thread_count} threads')
     print(f'results can be found at {path}')
     if not time_execution:
-        results_dataset = Parallel(n_jobs=thread_count)(delayed(simulate_one)(i, bots[i//test_count], scenario()[1], enemies, path, verbose) for i in tqdm(range(test_count * len(bots))))
+        results_dataset = Parallel(n_jobs=thread_count, backend='loky')(delayed(simulate_one)(i, bots[i//test_count], scenario()[1], enemies, path, verbose) for i in tqdm(range(test_count * len(bots))))
     else:
         results_dataset = []
         execution_times = {}
         for bot_id in range(len(bots)):
             start_time = time.time()
-            results_dataset += Parallel(n_jobs=thread_count)(delayed(simulate_one)(i, bots[bot_id], scenario()[1], enemies, path, verbose) for i in tqdm(range(test_count * bot_id, test_count * (bot_id + 1))))
+            results_dataset += Parallel(n_jobs=thread_count, backend='loky')(delayed(simulate_one)(i, bots[bot_id], scenario()[1], enemies, path, verbose) for i in tqdm(range(test_count * bot_id, test_count * (bot_id + 1))))
             execution_times[bots[bot_id].name] = {'avg_execution': (time.time() - start_time)/test_count}
             import json
             with open(os.path.join(path, "execution_times_partial.json"), "a") as fp:

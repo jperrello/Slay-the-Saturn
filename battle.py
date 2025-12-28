@@ -1,6 +1,7 @@
 from __future__ import annotations
 import copy
 import os.path
+import threading
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from agent import Enemy, Agent
@@ -13,6 +14,8 @@ from utility import get_unique_filename, Event
 from status_effecs import tolerance_after, bomb_after
 
 import random
+
+_deepcopy_lock = threading.Lock()
 
 class BattleState:
     side_turn_event: Event[None, tuple[Agent, GameState, BattleState, list[Agent]]] = Event()
@@ -32,7 +35,8 @@ class BattleState:
         self.log_filename = log_filename
 
     def copy_undeterministic(self) -> BattleState:
-        battle_state_copy = copy.deepcopy(self)
+        with _deepcopy_lock:
+            battle_state_copy = copy.deepcopy(self)
         random.shuffle(battle_state_copy.draw_pile)
         return battle_state_copy
     

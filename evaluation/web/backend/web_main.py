@@ -194,7 +194,7 @@ def run_race_simulations(race_manager: RaceManager, bot_names: List[str], deck: 
 
     sim_start_times = {}
     
-    with Parallel(n_jobs=thread_count, backend='threading', return_as='generator') as parallel:
+    with Parallel(n_jobs=thread_count, backend='loky', return_as='generator') as parallel:
         for idx, result in enumerate(parallel(sim_tasks)):
             sim_end_time = time.time()
             sim_start_time = sim_start_times.get(idx, race_manager.current_race.start_time)
