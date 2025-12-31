@@ -10,6 +10,8 @@ function RaceDashboard({ socket }) {
   const [showErrorPanel, setShowErrorPanel] = useState(false)
   const [totalSimsPerBot, setTotalSimsPerBot] = useState(25)
   const [raceStartTime, setRaceStartTime] = useState(null)
+  const [justFlashed, setJustFlashed] = useState({})
+  const [animatingStats, setAnimatingStats] = useState({})
 
   // Sort racers by wins (descending) for competitive leaderboard
   const sortedRacers = useMemo(() => {
@@ -74,9 +76,52 @@ function RaceDashboard({ socket }) {
 
     socket.on('racer_update', (data) => {
       console.log('Racer update:', data)
-      setRacers(prev => prev.map(racer =>
-        racer.name === data.bot_name ? { ...racer, ...data } : racer
-      ))
+      setRacers(prev => {
+        const updated = prev.map(racer => {
+          if (racer.name === data.bot_name) {
+            // Detect if this is a win or loss and trigger animation
+            const prevWins = racer.wins
+            const prevLosses = racer.losses
+            const isWin = data.wins > prevWins
+            const isLoss = data.losses > prevLosses
+            
+            if (isWin || isLoss) {
+              setJustFlashed(prev => ({
+                ...prev,
+                [data.bot_name]: isWin ? 'win' : 'loss'
+              }))
+              
+              // Trigger stat count animation
+              setAnimatingStats(prev => ({
+                ...prev,
+                [data.bot_name]: isWin ? 'win' : 'loss'
+              }))
+              
+              // Clear the flash state after animation completes
+              setTimeout(() => {
+                setJustFlashed(prev => {
+                  const newState = { ...prev }
+                  delete newState[data.bot_name]
+                  return newState
+                })
+              }, 600)
+              
+              // Clear the stat animation after it completes
+              setTimeout(() => {
+                setAnimatingStats(prev => {
+                  const newState = { ...prev }
+                  delete newState[data.bot_name]
+                  return newState
+                })
+              }, 600)
+            }
+            
+            return { ...racer, ...data }
+          }
+          return racer
+        })
+        return updated
+      })
     })
 
     socket.on('race_finished', (data) => {
@@ -184,7 +229,7 @@ function RaceDashboard({ socket }) {
             return (
               <div 
                 key={racer.name} 
-                className="leaderboard-row"
+                className={`leaderboard-row ${justFlashed[racer.name] === 'win' ? 'flash-win' : justFlashed[racer.name] === 'loss' ? 'flash-loss' : ''}`}
                 style={{
                   '--agent-color': botColor,
                   '--agent-color-glow': `${botColor}40`,
@@ -231,7 +276,9 @@ function RaceDashboard({ socket }) {
                 <div className="leaderboard-stats">
                   <div className="stat-item">
                     <span className="stat-label">Record</span>
-                    <span className="stat-value">{racer.wins}W / {racer.losses}L</span>
+                    <span className={`stat-value ${animatingStats[racer.name] === 'win' ? 'animate-win' : animatingStats[racer.name] === 'loss' ? 'animate-loss' : ''}`}>
+                      {racer.wins}W / {racer.losses}L
+                    </span>
                   </div>
                   <div className="stat-item">
                     <span className="stat-label">Win Rate</span>
