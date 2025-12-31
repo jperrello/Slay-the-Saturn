@@ -295,9 +295,22 @@
   height: 100%;
   min-width: 2px;
   border-radius: 7px;
-  transition: width 0.4s ease;
+  transition: width 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   box-shadow: 0 0 8px currentColor;
-  animation: progressGlow 2s ease-in-out infinite;
+  animation: progressGlow 2.5s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
 }
 
 @keyframes progressGlow {
@@ -305,8 +318,42 @@
     box-shadow: 0 0 8px currentColor;
   }
   50% {
-    box-shadow: 0 0 12px currentColor;
+    box-shadow: 0 0 14px currentColor, inset 0 0 8px rgba(255, 255, 255, 0.2);
   }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Staggered animations per rank position */
+.leaderboard-row:nth-child(1) .progress-bar-fill {
+  animation-delay: 0s;
+}
+
+.leaderboard-row:nth-child(2) .progress-bar-fill {
+  animation-delay: 0.1s;
+}
+
+.leaderboard-row:nth-child(3) .progress-bar-fill {
+  animation-delay: 0.2s;
+}
+
+.leaderboard-row:nth-child(4) .progress-bar-fill {
+  animation-delay: 0.3s;
+}
+
+.leaderboard-row:nth-child(5) .progress-bar-fill {
+  animation-delay: 0.4s;
+}
+
+.leaderboard-row:nth-child(n+6) .progress-bar-fill {
+  animation-delay: 0.5s;
 }
 
 /* Health Bar */
