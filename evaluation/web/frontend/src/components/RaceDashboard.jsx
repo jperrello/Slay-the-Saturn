@@ -11,9 +11,20 @@ function RaceDashboard({ socket }) {
   const [totalSimsPerBot, setTotalSimsPerBot] = useState(25)
   const [raceStartTime, setRaceStartTime] = useState(null)
 
-  // Sort racers consistently by name to fix P1 b2s ordering bug
+  // Sort racers by wins (descending) for competitive leaderboard
   const sortedRacers = useMemo(() => {
-    return [...racers].sort((a, b) => a.name.localeCompare(b.name))
+    return [...racers].sort((a, b) => {
+      // Sort by wins descending
+      if (b.wins !== a.wins) {
+        return b.wins - a.wins
+      }
+      // If wins are equal, sort by losses ascending (fewer losses = better)
+      if (a.losses !== b.losses) {
+        return a.losses - b.losses
+      }
+      // If wins and losses are equal, sort by name
+      return a.name.localeCompare(b.name)
+    })
   }, [racers])
 
   useEffect(() => {
@@ -157,8 +168,8 @@ function RaceDashboard({ socket }) {
       </div>
 
       {sortedRacers.length > 0 ? (
-        <div className="agent-cards-grid">
-          {sortedRacers.map(racer => {
+        <div className="leaderboard-container">
+          {sortedRacers.map((racer, index) => {
             const botColor = getBotColor(racer.name)
             const progressPercent = (racer.simulations_complete / totalSimsPerBot) * 100
             const healthPercent = racer.max_health > 0 
@@ -168,99 +179,97 @@ function RaceDashboard({ socket }) {
               ? ((racer.wins / (racer.wins + racer.losses)) * 100).toFixed(1)
               : '0.0'
 
+            const rankBadge = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`
+            
             return (
               <div 
                 key={racer.name} 
-                className="agent-card"
+                className="leaderboard-row"
                 style={{
                   '--agent-color': botColor,
-                  '--agent-color-glow': `${botColor}40`
+                  '--agent-color-glow': `${botColor}40`,
+                  '--rank-position': index + 1
                 }}
               >
-                {/* Header with bot name and status */}
-                <div className="agent-card-header">
-                  <span className="agent-name" style={{ color: botColor }}>
-                    {racer.name}
-                  </span>
-                  {racer.errors > 0 && (
-                    <span className="agent-status-badge error">
-                      {racer.errors} errors
+                {/* Rank Badge */}
+                <div className="rank-badge">
+                  <span className="rank-text">{rankBadge}</span>
+                </div>
+
+                {/* Agent Info */}
+                <div className="leaderboard-agent-info">
+                  <div className="agent-header">
+                    <span className="agent-name" style={{ color: botColor }}>
+                      {racer.name}
                     </span>
-                  )}
-                </div>
+                    {racer.errors > 0 && (
+                      <span className="agent-status-badge error">
+                        {racer.errors} errors
+                      </span>
+                    )}
+                  </div>
 
-                {/* Iteration Progress Bar */}
-                <div className="stat-section">
-                  <div className="stat-header">
-                    <span className="stat-label">Progress</span>
-                    <span className="stat-value">{racer.simulations_complete}/{totalSimsPerBot}</span>
-                  </div>
-                  <div className="progress-bar-container">
-                    <div 
-                      className="progress-bar-fill"
-                      style={{ 
-                        width: `${Math.min(100, progressPercent)}%`,
-                        background: `linear-gradient(90deg, ${botColor} 0%, ${botColor}cc 100%)`
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* Average Health Bar */}
-                <div className="stat-section">
-                  <div className="stat-header">
-                    <span className="stat-label">Avg Health</span>
-                    <span className="stat-value">{racer.avg_health.toFixed(1)} / {racer.max_health || 80}</span>
-                  </div>
-                  <div className="health-bar">
-                    <div 
-                      className="health-bar-fill"
-                      style={{ width: `${Math.min(100, healthPercent)}%` }}
-                    >
-                      {healthPercent > 10 && `${healthPercent.toFixed(0)}%`}
+                  {/* Progress Bar */}
+                  <div className="leaderboard-progress">
+                    <div className="progress-info">
+                      <span className="progress-label">Progress</span>
+                      <span className="progress-value">{racer.simulations_complete}/{totalSimsPerBot}</span>
+                    </div>
+                    <div className="progress-bar-container">
+                      <div 
+                        className="progress-bar-fill"
+                        style={{ 
+                          width: `${Math.min(100, progressPercent)}%`,
+                          background: `linear-gradient(90deg, ${botColor} 0%, ${botColor}cc 100%)`
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
 
-                {/* Stats Grid */}
-                <div className="agent-stats-grid">
-                  <div className="stat-card" style={{ '--stat-color': '#10b981' }}>
-                    <span className="stat-label">Win Rate</span>
-                    <span className="stat-value">{winRate}%</span>
-                  </div>
-                  <div className="stat-card" style={{ '--stat-color': botColor }}>
+                {/* Record and Stats */}
+                <div className="leaderboard-stats">
+                  <div className="stat-item">
                     <span className="stat-label">Record</span>
                     <span className="stat-value">{racer.wins}W / {racer.losses}L</span>
                   </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Win Rate</span>
+                    <span className="stat-value">{winRate}%</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Avg Health</span>
+                    <span className="stat-value">{racer.avg_health.toFixed(1)}/{racer.max_health}</span>
+                  </div>
                 </div>
 
-                {/* LLM Stats (only for LLM bots) */}
-                {racer.total_tokens > 0 && (
-                  <div className="agent-llm-stats">
-                    <div className="llm-stat">
-                      <span className="llm-label">Tokens</span>
-                      <span className="llm-value">{racer.total_tokens.toLocaleString()}</span>
-                    </div>
-                    <div className="llm-stat">
-                      <span className="llm-label">Avg Response</span>
-                      <span className="llm-value">{racer.avg_response_time.toFixed(2)}s</span>
-                    </div>
-                    {racer.invalid_responses > 0 && (
-                      <div className="llm-stat error">
-                        <span className="llm-label">Invalid</span>
-                        <span className="llm-value">{racer.invalid_responses}</span>
+                {/* LLM and Execution Stats */}
+                <div className="leaderboard-detailed-stats">
+                  {racer.total_tokens > 0 && (
+                    <>
+                      <div className="detail-stat">
+                        <span className="stat-label">Tokens</span>
+                        <span className="stat-value">{racer.total_tokens.toLocaleString()}</span>
                       </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Execution Time */}
-                {racer.avg_execution_time > 0 && (
-                  <div className="execution-time">
-                    <span className="execution-label">Avg Exec Time:</span>
-                    <span className="execution-value">{racer.avg_execution_time.toFixed(2)}s</span>
-                  </div>
-                )}
+                      <div className="detail-stat">
+                        <span className="stat-label">Resp Time</span>
+                        <span className="stat-value">{racer.avg_response_time.toFixed(2)}s</span>
+                      </div>
+                      {racer.invalid_responses > 0 && (
+                        <div className="detail-stat error">
+                          <span className="stat-label">Invalid</span>
+                          <span className="stat-value">{racer.invalid_responses}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {racer.avg_execution_time > 0 && (
+                    <div className="detail-stat">
+                      <span className="stat-label">Exec Time</span>
+                      <span className="stat-value">{racer.avg_execution_time.toFixed(2)}s</span>
+                    </div>
+                  )}
+                </div>
               </div>
             )
           })}
