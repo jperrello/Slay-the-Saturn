@@ -12,6 +12,8 @@ function RaceDashboard({ socket }) {
   const [raceStartTime, setRaceStartTime] = useState(null)
   const [justFlashed, setJustFlashed] = useState({})
   const [animatingStats, setAnimatingStats] = useState({})
+  const [previousRanks, setPreviousRanks] = useState({})
+  const [rankChanges, setRankChanges] = useState({})
 
   // Sort racers by wins (descending) for competitive leaderboard
   const sortedRacers = useMemo(() => {
@@ -28,6 +30,43 @@ function RaceDashboard({ socket }) {
       return a.name.localeCompare(b.name)
     })
   }, [racers])
+
+  // Track rank changes for animations
+  useEffect(() => {
+    if (sortedRacers.length === 0) return
+
+    const currentRanks = {}
+    sortedRacers.forEach((racer, index) => {
+      currentRanks[racer.name] = index + 1
+    })
+
+    // Detect rank changes
+    const changes = {}
+    Object.keys(currentRanks).forEach(name => {
+      const prevRank = previousRanks[name]
+      const currRank = currentRanks[name]
+
+      if (prevRank !== undefined && prevRank !== currRank) {
+        const delta = prevRank - currRank // positive = moved up, negative = moved down
+        changes[name] = {
+          delta,
+          direction: delta > 0 ? 'up' : 'down',
+          from: prevRank,
+          to: currRank
+        }
+      }
+    })
+
+    if (Object.keys(changes).length > 0) {
+      setRankChanges(changes)
+      // Clear rank change indicators after animation
+      setTimeout(() => {
+        setRankChanges({})
+      }, 1500)
+    }
+
+    setPreviousRanks(currentRanks)
+  }, [sortedRacers])
 
   useEffect(() => {
     if (!socket) return
@@ -56,6 +95,8 @@ function RaceDashboard({ socket }) {
       })))
       setErrors([])
       setShowErrorPanel(false)
+      setPreviousRanks({})
+      setRankChanges({})
     })
 
     socket.on('race_status', (data) => {
@@ -225,20 +266,29 @@ function RaceDashboard({ socket }) {
               : '0.0'
 
             const rankBadge = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`
-            
+            const rankChange = rankChanges[racer.name]
+            const isMovingUp = rankChange?.direction === 'up'
+            const isMovingDown = rankChange?.direction === 'down'
+
             return (
-              <div 
-                key={racer.name} 
-                className={`leaderboard-row ${justFlashed[racer.name] === 'win' ? 'flash-win' : justFlashed[racer.name] === 'loss' ? 'flash-loss' : ''}`}
+              <div
+                key={racer.name}
+                className={`leaderboard-row ${justFlashed[racer.name] === 'win' ? 'flash-win' : justFlashed[racer.name] === 'loss' ? 'flash-loss' : ''} ${isMovingUp ? 'rank-up' : ''} ${isMovingDown ? 'rank-down' : ''}`}
                 style={{
                   '--agent-color': botColor,
                   '--agent-color-glow': `${botColor}40`,
-                  '--rank-position': index + 1
+                  '--rank-position': index + 1,
+                  order: index
                 }}
               >
                 {/* Rank Badge */}
                 <div className="rank-badge">
                   <span className="rank-text">{rankBadge}</span>
+                  {rankChange && (
+                    <span className={`rank-change-indicator ${rankChange.direction}`}>
+                      {isMovingUp ? '▲' : '▼'} {Math.abs(rankChange.delta)}
+                    </span>
+                  )}
                 </div>
 
                 {/* Agent Info */}
