@@ -580,28 +580,121 @@
 }
 
 /* Health Bar */
-.health-bar {
+.health-stat {
+  min-width: 120px;
+}
+
+.health-bar-container {
   width: 100%;
-  height: 24px;
+  height: 22px;
   background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 6px;
   overflow: hidden;
   position: relative;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .health-bar-fill {
   height: 100%;
   min-width: 2px;
-  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
-  transition: width 0.3s ease;
+  border-radius: 5px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              background 0.5s ease,
+              box-shadow 0.5s ease;
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
+  justify-content: flex-end;
+  padding-right: 6px;
+  position: relative;
+  background: linear-gradient(90deg,
+    hsl(calc(120 * var(--health-percent, 100) / 100), 70%, 45%) 0%,
+    hsl(calc(120 * var(--health-percent, 100) / 100), 60%, 35%) 100%);
+  box-shadow: 0 0 8px hsla(calc(120 * var(--health-percent, 100) / 100), 70%, 50%, 0.5);
+}
+
+.health-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+  border-radius: 5px 5px 0 0;
+}
+
+.health-text {
+  font-size: 0.7rem;
+  font-weight: 700;
   color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  z-index: 1;
+}
+
+.health-text-overlay {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.7rem;
   font-weight: 600;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+  color: rgba(255, 255, 255, 0.7);
+  z-index: 2;
+}
+
+/* Critical health animation */
+.health-bar-container.critical .health-bar-fill {
+  animation: criticalPulse 1s ease-in-out infinite;
+}
+
+@keyframes criticalPulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.8), 0 0 24px rgba(239, 68, 68, 0.4);
+  }
+}
+
+/* Depleted health animation */
+.health-bar-container.depleted {
+  animation: depletedShake 0.5s ease-in-out;
+}
+
+.health-bar-container.depleted .health-bar-fill {
+  animation: depletedPulse 2s ease-in-out infinite;
+}
+
+@keyframes depletedShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-2px); }
+  40% { transform: translateX(2px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+
+@keyframes depletedPulse {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* High health glow effect */
+.health-bar-container:not(.critical):not(.depleted) .health-bar-fill {
+  animation: healthGlow 3s ease-in-out infinite;
+}
+
+@keyframes healthGlow {
+  0%, 100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.1);
+  }
 }
 
 /* Stats Grid */

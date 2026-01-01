@@ -334,9 +334,22 @@ function RaceDashboard({ socket }) {
                     <span className="stat-label">Win Rate</span>
                     <span className="stat-value">{winRate}%</span>
                   </div>
-                  <div className="stat-item">
+                  <div className="stat-item health-stat">
                     <span className="stat-label">Avg Health</span>
-                    <span className="stat-value">{racer.avg_health.toFixed(1)}/{racer.max_health}</span>
+                    <div className={`health-bar-container ${healthPercent < 25 ? 'critical' : ''} ${healthPercent === 0 ? 'depleted' : ''}`}>
+                      <div
+                        className="health-bar-fill"
+                        style={{
+                          width: `${Math.max(0, Math.min(100, healthPercent))}%`,
+                          '--health-percent': healthPercent
+                        }}
+                      >
+                        <span className="health-text">{racer.avg_health.toFixed(1)}</span>
+                      </div>
+                      {healthPercent < 100 && (
+                        <span className="health-text-overlay">{racer.avg_health.toFixed(1)}/{racer.max_health}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
