@@ -1141,6 +1141,24 @@
   border-left: 4px solid #fbbf24;
 }
 
+/* Touch-Friendly Active States */
+.toggle-errors-button:active {
+  transform: scale(0.98);
+}
+
+.clear-errors-button:active {
+  transform: scale(0.98);
+}
+
+.download-button:active,
+.new-race-button:active {
+  transform: scale(0.98);
+}
+
+.leaderboard-row:active {
+  transform: translateX(2px);
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .leaderboard-row {
@@ -1151,6 +1169,11 @@
     grid-column: 1 / -1;
     min-width: unset;
   }
+
+  .win-notifications {
+    right: 10px;
+    max-width: 280px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1160,16 +1183,36 @@
 
   .dashboard-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 1rem;
+  }
+
+  .dashboard-header h2 {
+    font-size: 1.5rem;
+    text-align: center;
   }
 
   .header-info {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
+    align-items: stretch;
+    gap: 0.75rem;
   }
 
+  .race-status {
+    justify-content: center;
+    min-height: 48px;
+    font-size: 1rem;
+  }
+
+  .race-timer {
+    text-align: center;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Leaderboard mobile */
   .leaderboard-row {
     grid-template-columns: 60px 1fr;
     gap: 1rem;
@@ -1184,22 +1227,230 @@
     font-size: 1.5rem;
   }
 
+  .agent-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
   .agent-name {
     font-size: 1.1rem;
+    flex-basis: 100%;
+  }
+
+  .agent-status-badge {
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    padding: 0.4rem 0.8rem;
   }
 
   .leaderboard-stats {
     grid-column: 1 / -1;
     gap: 0.75rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  }
+
+  .stat-item {
+    min-width: unset;
+    text-align: center;
   }
 
   .leaderboard-detailed-stats {
     grid-column: 1 / -1;
     gap: 1rem;
     padding-top: 0.75rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   }
 
+  .detail-stat {
+    min-width: unset;
+    text-align: center;
+  }
+
+  /* Progress bar mobile - larger touch target */
+  .progress-bar-container {
+    height: 18px;
+  }
+
+  /* Health bar mobile */
+  .health-bar-container {
+    height: 28px;
+  }
+
+  .health-text,
+  .health-text-overlay {
+    font-size: 0.8rem;
+  }
+
+  /* Error panel mobile */
+  .toggle-errors-button {
+    min-height: 52px;
+    padding: 1rem;
+    font-size: 1rem;
+  }
+
+  .error-panel-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .clear-errors-button {
+    min-height: 44px;
+    min-width: 100px;
+    font-size: 0.95rem;
+  }
+
+  .error-panel-content {
+    padding: 1rem;
+    max-height: 200px;
+  }
+
+  .error-entry {
+    padding: 1rem;
+    font-size: 0.85rem;
+    gap: 0.5rem;
+  }
+
+  /* Action buttons mobile */
   .race-actions {
     flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .download-button,
+  .new-race-button {
+    min-height: 56px;
+    padding: 1rem;
+    font-size: 1.1rem;
+  }
+
+  /* Win notifications mobile */
+  .win-notifications {
+    top: 70px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+
+  .win-notification {
+    padding: 0.85rem 1rem;
+  }
+
+  .win-icon {
+    font-size: 1.3rem;
+  }
+
+  .win-text {
+    font-size: 0.9rem;
+  }
+
+  /* Badges mobile */
+  .last-winner-badge,
+  .streak-badge {
+    font-size: 0.6rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  /* LLM stats mobile */
+  .agent-llm-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .llm-stat {
+    min-width: unset;
+    text-align: center;
+  }
+
+  .llm-label {
+    font-size: 0.65rem;
+  }
+
+  .llm-value {
+    font-size: 0.85rem;
+  }
+
+  /* No race state mobile */
+  .no-race {
+    padding: 3rem 1.5rem;
+  }
+
+  .no-race p {
+    font-size: 1.1rem;
+  }
+}
+
+/* Small mobile (< 480px) */
+@media (max-width: 480px) {
+  .RaceDashboard {
+    padding: 0.75rem;
+  }
+
+  .dashboard-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .leaderboard-row {
+    grid-template-columns: 50px 1fr;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .rank-badge {
+    height: 50px;
+  }
+
+  .rank-text {
+    font-size: 1.25rem;
+  }
+
+  .agent-name {
+    font-size: 1rem;
+  }
+
+  .leaderboard-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .stat-item .stat-label,
+  .detail-stat .stat-label {
+    font-size: 0.65rem;
+  }
+
+  .stat-item .stat-value,
+  .detail-stat .stat-value {
+    font-size: 0.9rem;
+  }
+
+  .leaderboard-detailed-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .win-notifications {
+    top: 60px;
+  }
+
+  .win-notification {
+    padding: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .win-icon {
+    font-size: 1.1rem;
+  }
+
+  .win-text {
+    font-size: 0.8rem;
+  }
+
+  .win-streak-badge {
+    font-size: 0.6rem;
+    padding: 0.2rem 0.4rem;
   }
 }
