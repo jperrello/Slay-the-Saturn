@@ -142,6 +142,44 @@
   background: rgba(168, 85, 247, 0.1);
 }
 
+.enemies-input.input-error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+.enemies-input.input-error:focus {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3);
+}
+
+/* Inline field error */
+.field-error {
+  color: #fca5a5;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 6px;
+  border-left: 3px solid #ef4444;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.field-error::before {
+  content: '⚠';
+  font-size: 0.9rem;
+}
+
+.section-error .section-label {
+  color: #fca5a5;
+}
+
+.bots-error {
+  border-color: #ef4444 !important;
+}
+
 .enemies-help {
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.6);

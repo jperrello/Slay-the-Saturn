@@ -101,13 +101,49 @@ function ConfigPage({ onStartRace }) {
   const [errorMessage, setErrorMessage] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState({
+    enemies: null,
+    bot_names: null,
+    test_count: null,
+    thread_count: null
+  })
+  const [touched, setTouched] = useState({
+    enemies: false,
+    bot_names: false
+  })
+
+  const validateEnemies = (value) => {
+    if (!value || value.trim() === '') {
+      return 'Enemies field cannot be empty'
+    }
+    if (!/^[hgljsb]+$/.test(value)) {
+      return 'Only valid characters: h, g, l, j, s, b'
+    }
+    return null
+  }
+
+  const validateBots = (bots) => {
+    if (bots.length === 0) {
+      return 'At least one bot must be selected'
+    }
+    return null
+  }
 
   const handleScenarioChange = (scenario) => {
     setFormData(prev => ({ ...prev, scenario }))
   }
 
   const handleEnemiesChange = (e) => {
-    setFormData(prev => ({ ...prev, enemies: e.target.value }))
+    const value = e.target.value
+    setFormData(prev => ({ ...prev, enemies: value }))
+    if (touched.enemies) {
+      setFieldErrors(prev => ({ ...prev, enemies: validateEnemies(value) }))
+    }
+  }
+
+  const handleEnemiesBlur = () => {
+    setTouched(prev => ({ ...prev, enemies: true }))
+    setFieldErrors(prev => ({ ...prev, enemies: validateEnemies(formData.enemies) }))
   }
 
   const handleTestCountChange = (e) => {
@@ -124,15 +160,19 @@ function ConfigPage({ onStartRace }) {
       const newBotNames = isSelected
         ? prev.bot_names.filter(name => name !== botName)
         : [...prev.bot_names, botName]
+      setFieldErrors(fe => ({ ...fe, bot_names: validateBots(newBotNames) }))
       return { ...prev, bot_names: newBotNames }
     })
+    setTouched(prev => ({ ...prev, bot_names: true }))
   }
 
   const handleRemoveBot = (botName) => {
-    setFormData(prev => ({
-      ...prev,
-      bot_names: prev.bot_names.filter(name => name !== botName)
-    }))
+    setFormData(prev => {
+      const newBotNames = prev.bot_names.filter(name => name !== botName)
+      setFieldErrors(fe => ({ ...fe, bot_names: validateBots(newBotNames) }))
+      return { ...prev, bot_names: newBotNames }
+    })
+    setTouched(prev => ({ ...prev, bot_names: true }))
   }
 
   const validateFormData = () => {
@@ -320,25 +360,32 @@ function ConfigPage({ onStartRace }) {
           <input
             id="enemies-input"
             type="text"
-            className="enemies-input"
+            className={`enemies-input ${touched.enemies && fieldErrors.enemies ? 'input-error' : ''}`}
             value={formData.enemies}
             onChange={handleEnemiesChange}
+            onBlur={handleEnemiesBlur}
             placeholder="e.g., h, ghl, j"
-            aria-describedby="enemies-help"
+            aria-describedby="enemies-help enemies-error"
+            aria-invalid={touched.enemies && fieldErrors.enemies ? 'true' : 'false'}
           />
+          {touched.enemies && fieldErrors.enemies && (
+            <div id="enemies-error" className="field-error" role="alert">
+              {fieldErrors.enemies}
+            </div>
+          )}
           <div id="enemies-help" className="enemies-help">
             h=HobGoblin • g=Goblin • l=Leech • j=JawWorm • s=SimpleEnemy • b=Bomber
           </div>
         </div>
 
         {/* Bot Selection */}
-        <div className="form-section" role="group" aria-labelledby="bot-selection-label">
+        <div className={`form-section ${touched.bot_names && fieldErrors.bot_names ? 'section-error' : ''}`} role="group" aria-labelledby="bot-selection-label">
           <label id="bot-selection-label" className="section-label">
             Bot Selection ({formData.bot_names.length} selected)
           </label>
 
           {/* Selected Bots */}
-          <div className="selected-bots" role="list" aria-label="Selected bots">
+          <div className={`selected-bots ${touched.bot_names && fieldErrors.bot_names ? 'bots-error' : ''}`} role="list" aria-label="Selected bots">
             {formData.bot_names.map(botName => (
               <div key={botName} className="selected-bot-chip" role="listitem">
                 {botName}
@@ -356,6 +403,11 @@ function ConfigPage({ onStartRace }) {
               <div className="no-bots-selected" role="listitem">No bots selected</div>
             )}
           </div>
+          {touched.bot_names && fieldErrors.bot_names && (
+            <div className="field-error" role="alert">
+              {fieldErrors.bot_names}
+            </div>
+          )}
 
           {/* Bot Dropdown */}
           <div className="bot-selector">
