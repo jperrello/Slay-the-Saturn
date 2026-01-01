@@ -21,6 +21,82 @@
   font-size: 1rem;
 }
 
+/* Form Grid Layout */
+.config-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+.form-section-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(168, 85, 247, 0.15);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.form-section-card:hover {
+  border-color: rgba(168, 85, 247, 0.3);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.form-section-card.highlighted {
+  border-color: rgba(168, 85, 247, 0.4);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.1);
+}
+
+.section-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.section-icon {
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(168, 85, 247, 0.15);
+  border-radius: 8px;
+  color: #a855f7;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex: 1;
+}
+
+.section-subtitle {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Grouped settings (Test + Thread counts) */
+.settings-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 600px) {
+  .settings-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .error-message {
   background-color: rgba(239, 68, 68, 0.1);
   border: 1px solid #ef4444;
@@ -50,12 +126,6 @@
 
 .error-close:hover {
   color: #ef4444;
-}
-
-.config-form {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
 }
 
 .form-section {
@@ -184,6 +254,64 @@
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.6);
   padding: 0.5rem;
+}
+
+/* Enemies Input Group */
+.enemies-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.enemies-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.legend-item {
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+}
+
+.legend-item strong {
+  color: #a855f7;
+  font-weight: 700;
+  margin-right: 2px;
+}
+
+/* Count Badge */
+.count-badge {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c084fc;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-left: 0.5rem;
+}
+
+/* Value Display for Sliders */
+.value-display {
+  color: #a855f7;
+  font-weight: 700;
+  font-size: 1.1em;
+  background: rgba(168, 85, 247, 0.1);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  margin-left: 0.25rem;
+}
+
+/* Form section inside card - smaller labels */
+.form-section-card .form-section .section-label {
+  font-size: 0.95rem;
+  text-transform: none;
+  letter-spacing: normal;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 /* Bot Selection */

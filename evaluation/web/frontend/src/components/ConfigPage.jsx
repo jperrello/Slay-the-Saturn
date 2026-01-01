@@ -344,9 +344,15 @@ function ConfigPage({ onStartRace }) {
       )}
 
       <div className="config-form">
-        {/* Scenario Selection */}
-        <div className="form-section" role="group" aria-labelledby="scenario-label">
-          <label id="scenario-label" className="section-label">Scenario</label>
+        {/* Scenario Selection Card */}
+        <div className="form-section-card" role="group" aria-labelledby="scenario-label">
+          <div className="section-card-header">
+            <span className="section-icon" aria-hidden="true">🎮</span>
+            <div>
+              <div id="scenario-label" className="section-title">Scenario</div>
+              <div className="section-subtitle">Choose the starting deck configuration</div>
+            </div>
+          </div>
           <div className="scenario-grid" role="radiogroup" aria-label="Select game scenario">
             {Object.keys(SCENARIO_DESCRIPTIONS).map(key => {
               const scenarioNum = parseInt(key)
@@ -375,38 +381,53 @@ function ConfigPage({ onStartRace }) {
           </div>
         </div>
 
-        {/* Enemies Input */}
-        <div className="form-section">
-          <label className="section-label" htmlFor="enemies-input">
-            Enemies
-          </label>
-          <input
-            id="enemies-input"
-            type="text"
-            className={`enemies-input ${touched.enemies && fieldErrors.enemies ? 'input-error' : ''}`}
-            value={formData.enemies}
-            onChange={handleEnemiesChange}
-            onBlur={handleEnemiesBlur}
-            placeholder="e.g., h, ghl, j"
-            aria-describedby="enemies-help enemies-error"
-            aria-invalid={touched.enemies && fieldErrors.enemies ? 'true' : 'false'}
-          />
+        {/* Enemies Input Card */}
+        <div className="form-section-card">
+          <div className="section-card-header">
+            <span className="section-icon" aria-hidden="true">👾</span>
+            <div>
+              <label className="section-title" htmlFor="enemies-input">Enemies</label>
+              <div className="section-subtitle">Select opponent types to battle against</div>
+            </div>
+          </div>
+          <div className="enemies-input-group">
+            <input
+              id="enemies-input"
+              type="text"
+              className={`enemies-input ${touched.enemies && fieldErrors.enemies ? 'input-error' : ''}`}
+              value={formData.enemies}
+              onChange={handleEnemiesChange}
+              onBlur={handleEnemiesBlur}
+              placeholder="e.g., h, ghl, j"
+              aria-describedby="enemies-help enemies-error"
+              aria-invalid={touched.enemies && fieldErrors.enemies ? 'true' : 'false'}
+            />
+            <div id="enemies-help" className="enemies-legend">
+              <span className="legend-item"><strong>h</strong>=HobGoblin</span>
+              <span className="legend-item"><strong>g</strong>=Goblin</span>
+              <span className="legend-item"><strong>l</strong>=Leech</span>
+              <span className="legend-item"><strong>j</strong>=JawWorm</span>
+              <span className="legend-item"><strong>s</strong>=SimpleEnemy</span>
+              <span className="legend-item"><strong>b</strong>=Bomber</span>
+            </div>
+          </div>
           {touched.enemies && fieldErrors.enemies && (
             <div id="enemies-error" className="field-error" role="alert">
               {fieldErrors.enemies}
             </div>
           )}
-          <div id="enemies-help" className="enemies-help">
-            h=HobGoblin • g=Goblin • l=Leech • j=JawWorm • s=SimpleEnemy • b=Bomber
-          </div>
         </div>
 
-        {/* Bot Selection */}
-        <div className={`form-section ${touched.bot_names && fieldErrors.bot_names ? 'section-error' : ''}`} role="group" aria-labelledby="bot-selection-label">
-          <div className="section-header-row">
-            <label id="bot-selection-label" className="section-label">
-              Bot Selection ({formData.bot_names.length}/{AVAILABLE_BOTS.length})
-            </label>
+        {/* Bot Selection Card */}
+        <div className={`form-section-card ${touched.bot_names && fieldErrors.bot_names ? 'section-error' : ''}`} role="group" aria-labelledby="bot-selection-label">
+          <div className="section-card-header">
+            <span className="section-icon" aria-hidden="true">🤖</span>
+            <div>
+              <div id="bot-selection-label" className="section-title">
+                Bot Selection <span className="count-badge">{formData.bot_names.length}/{AVAILABLE_BOTS.length}</span>
+              </div>
+              <div className="section-subtitle">Choose AI agents to compete in the race</div>
+            </div>
             <div className="bot-actions">
               <button
                 type="button"
@@ -539,56 +560,68 @@ function ConfigPage({ onStartRace }) {
           </div>
         </div>
 
-        {/* Test Count Slider */}
-        <div className="form-section">
-          <label className="section-label" htmlFor="test-count-slider">
-            Test Count: <span className="value-display">{formData.test_count}</span>
-          </label>
-          <div className="slider-container">
-            <input
-              id="test-count-slider"
-              type="range"
-              min="1"
-              max="100"
-              value={formData.test_count}
-              onChange={handleTestCountChange}
-              className="slider"
-              aria-valuemin={1}
-              aria-valuemax={100}
-              aria-valuenow={formData.test_count}
-              aria-valuetext={`${formData.test_count} simulations per bot`}
-            />
-            <div className="slider-labels" aria-hidden="true">
-              <span>1</span>
-              <span>50</span>
-              <span>100</span>
+        {/* Performance Settings Card */}
+        <div className="form-section-card">
+          <div className="section-card-header">
+            <span className="section-icon" aria-hidden="true">⚙️</span>
+            <div>
+              <div className="section-title">Performance Settings</div>
+              <div className="section-subtitle">Configure simulation count and parallel execution</div>
             </div>
           </div>
-        </div>
+          <div className="settings-row">
+            {/* Test Count Slider */}
+            <div className="form-section">
+              <label className="section-label" htmlFor="test-count-slider">
+                Simulations per Bot: <span className="value-display">{formData.test_count}</span>
+              </label>
+              <div className="slider-container">
+                <input
+                  id="test-count-slider"
+                  type="range"
+                  min="1"
+                  max="100"
+                  value={formData.test_count}
+                  onChange={handleTestCountChange}
+                  className="slider"
+                  aria-valuemin={1}
+                  aria-valuemax={100}
+                  aria-valuenow={formData.test_count}
+                  aria-valuetext={`${formData.test_count} simulations per bot`}
+                />
+                <div className="slider-labels" aria-hidden="true">
+                  <span>1</span>
+                  <span>50</span>
+                  <span>100</span>
+                </div>
+              </div>
+            </div>
 
-        {/* Thread Count Slider */}
-        <div className="form-section">
-          <label className="section-label" htmlFor="thread-count-slider">
-            Thread Count: <span className="value-display">{formData.thread_count}</span>
-          </label>
-          <div className="slider-container">
-            <input
-              id="thread-count-slider"
-              type="range"
-              min="1"
-              max="16"
-              value={formData.thread_count}
-              onChange={handleThreadCountChange}
-              className="slider"
-              aria-valuemin={1}
-              aria-valuemax={16}
-              aria-valuenow={formData.thread_count}
-              aria-valuetext={`${formData.thread_count} parallel threads`}
-            />
-            <div className="slider-labels" aria-hidden="true">
-              <span>1</span>
-              <span>8</span>
-              <span>16</span>
+            {/* Thread Count Slider */}
+            <div className="form-section">
+              <label className="section-label" htmlFor="thread-count-slider">
+                Parallel Threads: <span className="value-display">{formData.thread_count}</span>
+              </label>
+              <div className="slider-container">
+                <input
+                  id="thread-count-slider"
+                  type="range"
+                  min="1"
+                  max="16"
+                  value={formData.thread_count}
+                  onChange={handleThreadCountChange}
+                  className="slider"
+                  aria-valuemin={1}
+                  aria-valuemax={16}
+                  aria-valuenow={formData.thread_count}
+                  aria-valuetext={`${formData.thread_count} parallel threads`}
+                />
+                <div className="slider-labels" aria-hidden="true">
+                  <span>1</span>
+                  <span>8</span>
+                  <span>16</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
