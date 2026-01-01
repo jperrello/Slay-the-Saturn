@@ -1,5 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import './ConfigPage.css'
+
+const STORAGE_KEYS = {
+  LAST_CONFIG: 'race-config-last',
+  SAVED_CONFIGS: 'race-configs-saved'
+}
 
 const SCENARIO_DESCRIPTIONS = {
   0: 'Starter Ironclad: 5 Strikes, 4 Defends, 1 Bash',
@@ -111,6 +116,64 @@ function ConfigPage({ onStartRace }) {
     enemies: false,
     bot_names: false
   })
+  const [savedConfigs, setSavedConfigs] = useState([])
+  const [showSavedConfigs, setShowSavedConfigs] = useState(false)
+  const [saveConfigName, setSaveConfigName] = useState('')
+  const [showSaveDialog, setShowSaveDialog] = useState(false)
+
+  useEffect(() => {
+    try {
+      const lastConfig = localStorage.getItem(STORAGE_KEYS.LAST_CONFIG)
+      if (lastConfig) {
+        const parsed = JSON.parse(lastConfig)
+        setFormData(prev => ({ ...prev, ...parsed }))
+      }
+      const saved = localStorage.getItem(STORAGE_KEYS.SAVED_CONFIGS)
+      if (saved) {
+        setSavedConfigs(JSON.parse(saved))
+      }
+    } catch (error) {
+      console.error('Error loading saved configs:', error)
+    }
+  }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.LAST_CONFIG, JSON.stringify(formData))
+    } catch (error) {
+      console.error('Error saving config:', error)
+    }
+  }, [formData])
+
+  const handleSaveConfig = useCallback(() => {
+    if (!saveConfigName.trim()) return
+
+    const newConfig = {
+      id: Date.now(),
+      name: saveConfigName.trim(),
+      config: { ...formData },
+      createdAt: new Date().toISOString()
+    }
+
+    const updatedConfigs = [...savedConfigs, newConfig]
+    setSavedConfigs(updatedConfigs)
+    localStorage.setItem(STORAGE_KEYS.SAVED_CONFIGS, JSON.stringify(updatedConfigs))
+    setSaveConfigName('')
+    setShowSaveDialog(false)
+  }, [saveConfigName, formData, savedConfigs])
+
+  const handleLoadConfig = useCallback((config) => {
+    setFormData(config.config)
+    setShowSavedConfigs(false)
+    setTouched({ enemies: false, bot_names: false })
+    setFieldErrors({ enemies: null, bot_names: null, test_count: null, thread_count: null })
+  }, [])
+
+  const handleDeleteConfig = useCallback((configId) => {
+    const updatedConfigs = savedConfigs.filter(c => c.id !== configId)
+    setSavedConfigs(updatedConfigs)
+    localStorage.setItem(STORAGE_KEYS.SAVED_CONFIGS, JSON.stringify(updatedConfigs))
+  }, [savedConfigs])
 
   const validateEnemies = (value) => {
     if (!value || value.trim() === '') {
@@ -324,9 +387,118 @@ function ConfigPage({ onStartRace }) {
   return (
     <div className="ConfigPage">
       <div className="config-header">
-        <h2>Race Configuration</h2>
-        <p className="config-subtitle">Configure your agent evaluation race</p>
+        <div className="header-title">
+          <h2>Race Configuration</h2>
+          <p className="config-subtitle">Configure your agent evaluation race</p>
+        </div>
+        <div className="config-actions">
+          <button
+            type="button"
+            className="config-action-btn save"
+            onClick={() => setShowSaveDialog(true)}
+            title="Save current configuration"
+          >
+            <span aria-hidden="true">💾</span> Save Config
+          </button>
+          <button
+            type="button"
+            className="config-action-btn load"
+            onClick={() => setShowSavedConfigs(!showSavedConfigs)}
+            title="Load saved configuration"
+          >
+            <span aria-hidden="true">📂</span> Saved ({savedConfigs.length})
+          </button>
+        </div>
       </div>
+
+      {/* Saved Configs Panel */}
+      {showSavedConfigs && (
+        <div className="saved-configs-panel">
+          <div className="saved-configs-header">
+            <h3>Saved Configurations</h3>
+            <button
+              type="button"
+              className="close-panel-btn"
+              onClick={() => setShowSavedConfigs(false)}
+            >
+              ×
+            </button>
+          </div>
+          {savedConfigs.length === 0 ? (
+            <p className="no-saved-configs">No saved configurations yet</p>
+          ) : (
+            <div className="saved-configs-list">
+              {savedConfigs.map(config => (
+                <div key={config.id} className="saved-config-item">
+                  <div className="saved-config-info">
+                    <span className="saved-config-name">{config.name}</span>
+                    <span className="saved-config-details">
+                      Scenario {config.config.scenario} • {config.config.bot_names.length} bots • {config.config.test_count} sims
+                    </span>
+                  </div>
+                  <div className="saved-config-actions">
+                    <button
+                      type="button"
+                      className="load-config-btn"
+                      onClick={() => handleLoadConfig(config)}
+                    >
+                      Load
+                    </button>
+                    <button
+                      type="button"
+                      className="delete-config-btn"
+                      onClick={() => handleDeleteConfig(config.id)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Save Config Dialog */}
+      {showSaveDialog && (
+        <div className="save-dialog-overlay" role="dialog" aria-modal="true">
+          <div className="save-dialog">
+            <h3>Save Configuration</h3>
+            <input
+              type="text"
+              className="save-config-input"
+              placeholder="Configuration name..."
+              value={saveConfigName}
+              onChange={(e) => setSaveConfigName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveConfig()
+                if (e.key === 'Escape') setShowSaveDialog(false)
+              }}
+              autoFocus
+            />
+            <div className="save-dialog-actions">
+              <button
+                type="button"
+                className="cancel-btn"
+                onClick={() => {
+                  setShowSaveDialog(false)
+                  setSaveConfigName('')
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="save-btn"
+                onClick={handleSaveConfig}
+                disabled={!saveConfigName.trim()}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {errorMessage && (
         <div className="error-message">
