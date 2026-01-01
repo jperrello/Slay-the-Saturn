@@ -175,6 +175,29 @@ function ConfigPage({ onStartRace }) {
     setTouched(prev => ({ ...prev, bot_names: true }))
   }
 
+  const handleSelectAllBots = () => {
+    const allBotNames = AVAILABLE_BOTS.map(b => b.name)
+    setFormData(prev => ({ ...prev, bot_names: allBotNames }))
+    setFieldErrors(prev => ({ ...prev, bot_names: null }))
+    setTouched(prev => ({ ...prev, bot_names: true }))
+  }
+
+  const handleClearAllBots = () => {
+    setFormData(prev => ({ ...prev, bot_names: [] }))
+    setFieldErrors(prev => ({ ...prev, bot_names: validateBots([]) }))
+    setTouched(prev => ({ ...prev, bot_names: true }))
+  }
+
+  const handleSelectCategory = (category) => {
+    const categoryBots = AVAILABLE_BOTS.filter(b => b.category === category).map(b => b.name)
+    setFormData(prev => {
+      const newBotNames = [...new Set([...prev.bot_names, ...categoryBots])]
+      setFieldErrors(fe => ({ ...fe, bot_names: validateBots(newBotNames) }))
+      return { ...prev, bot_names: newBotNames }
+    })
+    setTouched(prev => ({ ...prev, bot_names: true }))
+  }
+
   const validateFormData = () => {
     const errors = []
 
@@ -380,9 +403,29 @@ function ConfigPage({ onStartRace }) {
 
         {/* Bot Selection */}
         <div className={`form-section ${touched.bot_names && fieldErrors.bot_names ? 'section-error' : ''}`} role="group" aria-labelledby="bot-selection-label">
-          <label id="bot-selection-label" className="section-label">
-            Bot Selection ({formData.bot_names.length} selected)
-          </label>
+          <div className="section-header-row">
+            <label id="bot-selection-label" className="section-label">
+              Bot Selection ({formData.bot_names.length}/{AVAILABLE_BOTS.length})
+            </label>
+            <div className="bot-actions">
+              <button
+                type="button"
+                className="bot-action-btn select-all"
+                onClick={handleSelectAllBots}
+                disabled={formData.bot_names.length === AVAILABLE_BOTS.length}
+              >
+                Select All
+              </button>
+              <button
+                type="button"
+                className="bot-action-btn clear-all"
+                onClick={handleClearAllBots}
+                disabled={formData.bot_names.length === 0}
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
 
           {/* Selected Bots */}
           <div className={`selected-bots ${touched.bot_names && fieldErrors.bot_names ? 'bots-error' : ''}`} role="list" aria-label="Selected bots">
@@ -439,9 +482,25 @@ function ConfigPage({ onStartRace }) {
                   </button>
                 </div>
                 <div className="bot-dropdown-content">
-                  {Object.keys(groupedBots).map(category => (
+                  {Object.keys(groupedBots).map(category => {
+                    const categoryBotNames = groupedBots[category].map(b => b.name)
+                    const allCategorySelected = categoryBotNames.every(name => formData.bot_names.includes(name))
+                    return (
                     <div key={category} className="bot-category" role="group" aria-label={category}>
-                      <div className="bot-category-header" role="presentation">{category}</div>
+                      <div className="bot-category-header" role="presentation">
+                        <span>{category}</span>
+                        <button
+                          type="button"
+                          className="category-select-btn"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleSelectCategory(category)
+                          }}
+                          disabled={allCategorySelected}
+                        >
+                          {allCategorySelected ? '✓ All' : '+Add All'}
+                        </button>
+                      </div>
                       {groupedBots[category].map(bot => {
                         const isSelected = formData.bot_names.includes(bot.name)
                         return (
@@ -470,7 +529,7 @@ function ConfigPage({ onStartRace }) {
                         )
                       })}
                     </div>
-                  ))}
+                  )})}
                   {Object.keys(groupedBots).length === 0 && (
                     <div className="no-results" role="status">No bots found</div>
                   )}
