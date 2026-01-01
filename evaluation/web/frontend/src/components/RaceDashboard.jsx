@@ -14,6 +14,9 @@ function RaceDashboard({ socket }) {
   const [animatingStats, setAnimatingStats] = useState({})
   const [previousRanks, setPreviousRanks] = useState({})
   const [rankChanges, setRankChanges] = useState({})
+  const [winStreaks, setWinStreaks] = useState({})
+  const [recentWins, setRecentWins] = useState([])
+  const [lastWinner, setLastWinner] = useState(null)
 
   // Sort racers by wins (descending) for competitive leaderboard
   const sortedRacers = useMemo(() => {
@@ -97,6 +100,9 @@ function RaceDashboard({ socket }) {
       setShowErrorPanel(false)
       setPreviousRanks({})
       setRankChanges({})
+      setWinStreaks({})
+      setRecentWins([])
+      setLastWinner(null)
     })
 
     socket.on('race_status', (data) => {
@@ -120,25 +126,52 @@ function RaceDashboard({ socket }) {
       setRacers(prev => {
         const updated = prev.map(racer => {
           if (racer.name === data.bot_name) {
-            // Detect if this is a win or loss and trigger animation
             const prevWins = racer.wins
             const prevLosses = racer.losses
             const isWin = data.wins > prevWins
             const isLoss = data.losses > prevLosses
-            
+
             if (isWin || isLoss) {
               setJustFlashed(prev => ({
                 ...prev,
                 [data.bot_name]: isWin ? 'win' : 'loss'
               }))
-              
-              // Trigger stat count animation
+
               setAnimatingStats(prev => ({
                 ...prev,
                 [data.bot_name]: isWin ? 'win' : 'loss'
               }))
-              
-              // Clear the flash state after animation completes
+
+              // Track win streaks
+              if (isWin) {
+                setWinStreaks(prev => ({
+                  ...prev,
+                  [data.bot_name]: (prev[data.bot_name] || 0) + 1
+                }))
+
+                // Set last winner
+                setLastWinner(data.bot_name)
+
+                // Add to recent wins for notification
+                const winNotification = {
+                  id: Date.now(),
+                  botName: data.bot_name,
+                  streak: (winStreaks[data.bot_name] || 0) + 1
+                }
+                setRecentWins(prev => [...prev.slice(-4), winNotification])
+
+                // Auto-remove notification after 4 seconds
+                setTimeout(() => {
+                  setRecentWins(prev => prev.filter(w => w.id !== winNotification.id))
+                }, 4000)
+              } else {
+                // Reset streak on loss
+                setWinStreaks(prev => ({
+                  ...prev,
+                  [data.bot_name]: 0
+                }))
+              }
+
               setTimeout(() => {
                 setJustFlashed(prev => {
                   const newState = { ...prev }
@@ -146,8 +179,7 @@ function RaceDashboard({ socket }) {
                   return newState
                 })
               }, 600)
-              
-              // Clear the stat animation after it completes
+
               setTimeout(() => {
                 setAnimatingStats(prev => {
                   const newState = { ...prev }
@@ -156,7 +188,7 @@ function RaceDashboard({ socket }) {
                 })
               }, 600)
             }
-            
+
             return { ...racer, ...data }
           }
           return racer
@@ -259,13 +291,34 @@ function RaceDashboard({ socket }) {
         </div>
       </div>
 
+      {/* Win Notifications Toast Area */}
+      {recentWins.length > 0 && (
+        <div className="win-notifications" role="log" aria-label="Recent wins">
+          {recentWins.map(win => (
+            <div
+              key={win.id}
+              className={`win-notification ${win.streak >= 5 ? 'mega-streak' : win.streak >= 3 ? 'hot-streak' : ''}`}
+              style={{ '--win-color': getBotColor(win.botName) }}
+            >
+              <span className="win-icon" aria-hidden="true">🏆</span>
+              <span className="win-text">
+                <strong style={{ color: getBotColor(win.botName) }}>{win.botName}</strong> wins!
+              </span>
+              {win.streak > 1 && (
+                <span className="win-streak-badge">{win.streak}x STREAK</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       {sortedRacers.length > 0 ? (
         <div className="leaderboard-container" role="list" aria-label="Race leaderboard">
           {sortedRacers.map((racer, index) => {
             const botColor = getBotColor(racer.name)
             const progressPercent = (racer.simulations_complete / totalSimsPerBot) * 100
-            const healthPercent = racer.max_health > 0 
-              ? (racer.avg_health / racer.max_health) * 100 
+            const healthPercent = racer.max_health > 0
+              ? (racer.avg_health / racer.max_health) * 100
               : 0
             const winRate = racer.wins + racer.losses > 0
               ? ((racer.wins / (racer.wins + racer.losses)) * 100).toFixed(1)
@@ -275,13 +328,17 @@ function RaceDashboard({ socket }) {
             const rankChange = rankChanges[racer.name]
             const isMovingUp = rankChange?.direction === 'up'
             const isMovingDown = rankChange?.direction === 'down'
+            const currentStreak = winStreaks[racer.name] || 0
+            const isLastWinner = lastWinner === racer.name
+            const hasMegaStreak = currentStreak >= 5
+            const hasHotStreak = currentStreak >= 3
 
             return (
               <div
                 key={racer.name}
                 role="listitem"
                 aria-label={`${racer.name}: Rank ${index + 1}, ${racer.wins} wins, ${racer.losses} losses`}
-                className={`leaderboard-row ${justFlashed[racer.name] === 'win' ? 'flash-win' : justFlashed[racer.name] === 'loss' ? 'flash-loss' : ''} ${isMovingUp ? 'rank-up' : ''} ${isMovingDown ? 'rank-down' : ''}`}
+                className={`leaderboard-row ${justFlashed[racer.name] === 'win' ? 'flash-win' : justFlashed[racer.name] === 'loss' ? 'flash-loss' : ''} ${isMovingUp ? 'rank-up' : ''} ${isMovingDown ? 'rank-down' : ''} ${hasMegaStreak ? 'mega-streak-row' : hasHotStreak ? 'hot-streak-row' : ''} ${isLastWinner ? 'last-winner' : ''}`}
                 style={{
                   '--agent-color': botColor,
                   '--agent-color-glow': `${botColor}40`,
@@ -309,6 +366,16 @@ function RaceDashboard({ socket }) {
                     <span className="agent-name" style={{ color: botColor }}>
                       {racer.name}
                     </span>
+                    {isLastWinner && (
+                      <span className="last-winner-badge" role="status">
+                        <span aria-hidden="true">⭐</span> LAST WIN
+                      </span>
+                    )}
+                    {currentStreak >= 3 && (
+                      <span className={`streak-badge ${hasMegaStreak ? 'mega' : 'hot'}`} role="status">
+                        <span aria-hidden="true">🔥</span> {currentStreak}-WIN STREAK
+                      </span>
+                    )}
                     {racer.errors > 0 && (
                       <span className="agent-status-badge error" role="alert">
                         <span aria-hidden="true">⚠</span> {racer.errors} errors
