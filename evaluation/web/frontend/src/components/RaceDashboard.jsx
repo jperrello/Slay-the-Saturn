@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { getBotColor } from '../config/botColors'
+import AnimatedCounter from './AnimatedCounter'
 import './RaceDashboard.css'
 
 function RaceDashboard({ socket }) {
@@ -413,12 +414,14 @@ function RaceDashboard({ socket }) {
                   <div className="stat-item">
                     <span className="stat-label">Record</span>
                     <span className={`stat-value ${animatingStats[racer.name] === 'win' ? 'animate-win' : animatingStats[racer.name] === 'loss' ? 'animate-loss' : ''}`}>
-                      {racer.wins}W / {racer.losses}L
+                      <AnimatedCounter value={racer.wins} suffix="W" /> / <AnimatedCounter value={racer.losses} suffix="L" />
                     </span>
                   </div>
                   <div className="stat-item">
                     <span className="stat-label">Win Rate</span>
-                    <span className="stat-value">{winRate}%</span>
+                    <span className="stat-value">
+                      <AnimatedCounter value={parseFloat(winRate)} decimals={1} suffix="%" duration={300} />
+                    </span>
                   </div>
                   <div className="stat-item health-stat">
                     <span className="stat-label">Avg Health</span>
@@ -445,16 +448,22 @@ function RaceDashboard({ socket }) {
                     <>
                       <div className="detail-stat">
                         <span className="stat-label">Tokens</span>
-                        <span className="stat-value">{racer.total_tokens.toLocaleString()}</span>
+                        <span className="stat-value">
+                          <AnimatedCounter value={racer.total_tokens} duration={500} />
+                        </span>
                       </div>
                       <div className="detail-stat">
                         <span className="stat-label">Resp Time</span>
-                        <span className="stat-value">{racer.avg_response_time.toFixed(2)}s</span>
+                        <span className="stat-value">
+                          <AnimatedCounter value={racer.avg_response_time} decimals={2} suffix="s" duration={300} />
+                        </span>
                       </div>
                       {racer.invalid_responses > 0 && (
                         <div className="detail-stat error">
                           <span className="stat-label">Invalid</span>
-                          <span className="stat-value">{racer.invalid_responses}</span>
+                          <span className="stat-value">
+                            <AnimatedCounter value={racer.invalid_responses} />
+                          </span>
                         </div>
                       )}
                     </>
@@ -462,7 +471,9 @@ function RaceDashboard({ socket }) {
                   {racer.avg_execution_time > 0 && (
                     <div className="detail-stat">
                       <span className="stat-label">Exec Time</span>
-                      <span className="stat-value">{racer.avg_execution_time.toFixed(2)}s</span>
+                      <span className="stat-value">
+                        <AnimatedCounter value={racer.avg_execution_time} decimals={2} suffix="s" duration={300} />
+                      </span>
                     </div>
                   )}
                 </div>
