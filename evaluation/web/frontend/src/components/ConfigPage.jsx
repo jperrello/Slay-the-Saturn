@@ -100,6 +100,7 @@ function ConfigPage({ onStartRace }) {
   const [botSearchQuery, setBotSearchQuery] = useState('')
   const [errorMessage, setErrorMessage] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
 
   const handleScenarioChange = (scenario) => {
     setFormData(prev => ({ ...prev, scenario }))
@@ -166,7 +167,7 @@ function ConfigPage({ onStartRace }) {
     return errors
   }
 
-  const handleStartRace = async () => {
+  const handleShowConfirmation = () => {
     setErrorMessage(null)
 
     const errors = validateFormData()
@@ -175,6 +176,15 @@ function ConfigPage({ onStartRace }) {
       return
     }
 
+    setShowConfirmDialog(true)
+  }
+
+  const handleCancelRace = () => {
+    setShowConfirmDialog(false)
+  }
+
+  const handleConfirmRace = async () => {
+    setShowConfirmDialog(false)
     setIsLoading(true)
 
     try {
@@ -476,7 +486,7 @@ function ConfigPage({ onStartRace }) {
         <button
           type="button"
           className="start-race-button"
-          onClick={handleStartRace}
+          onClick={handleShowConfirmation}
           disabled={isLoading || validateFormData().length > 0}
           aria-busy={isLoading}
           aria-disabled={isLoading || validateFormData().length > 0}
@@ -491,6 +501,58 @@ function ConfigPage({ onStartRace }) {
           )}
         </button>
       </div>
+
+      {/* Confirmation Dialog */}
+      {showConfirmDialog && (
+        <div className="confirm-dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
+          <div className="confirm-dialog">
+            <h3 id="confirm-dialog-title">Confirm Race Configuration</h3>
+            <div className="confirm-dialog-content">
+              <div className="confirm-item">
+                <span className="confirm-label">Scenario:</span>
+                <span className="confirm-value">{SCENARIO_DESCRIPTIONS[formData.scenario]}</span>
+              </div>
+              <div className="confirm-item">
+                <span className="confirm-label">Enemies:</span>
+                <span className="confirm-value">{formData.enemies}</span>
+              </div>
+              <div className="confirm-item">
+                <span className="confirm-label">Bots ({formData.bot_names.length}):</span>
+                <div className="confirm-bots">
+                  {formData.bot_names.map(bot => (
+                    <span key={bot} className="confirm-bot-chip">{bot}</span>
+                  ))}
+                </div>
+              </div>
+              <div className="confirm-item">
+                <span className="confirm-label">Simulations:</span>
+                <span className="confirm-value">{formData.test_count} per bot × {formData.bot_names.length} bots = <strong>{formData.test_count * formData.bot_names.length} total</strong></span>
+              </div>
+              <div className="confirm-item">
+                <span className="confirm-label">Threads:</span>
+                <span className="confirm-value">{formData.thread_count}</span>
+              </div>
+            </div>
+            <div className="confirm-dialog-actions">
+              <button
+                type="button"
+                className="cancel-button"
+                onClick={handleCancelRace}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="confirm-button"
+                onClick={handleConfirmRace}
+                autoFocus
+              >
+                Start Race
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
