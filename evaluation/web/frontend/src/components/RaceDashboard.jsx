@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { getBotColor } from '../config/botColors'
 import AnimatedCounter from './AnimatedCounter'
 import './RaceDashboard.css'
@@ -225,14 +225,14 @@ function RaceDashboard({ socket }) {
     }
   }, [socket])
 
-  const handleDownloadCSV = async () => {
+  const handleDownloadCSV = useCallback(async () => {
     try {
       const response = await fetch('http://localhost:8000/api/race/download')
-      
+
       if (!response.ok) {
         throw new Error(`Failed to download CSV: ${response.statusText}`)
       }
-      
+
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -246,29 +246,37 @@ function RaceDashboard({ socket }) {
       console.error('Error downloading CSV:', error)
       alert(`Error: ${error.message}`)
     }
-  }
+  }, [])
 
-  const handleNewRace = () => {
+  const handleNewRace = useCallback(() => {
     setRaceStatus('idle')
     setRacers([])
     setRaceData(null)
     setErrors([])
     setShowErrorPanel(false)
     setRaceStartTime(null)
-  }
+  }, [])
 
-  const formatTime = (seconds) => {
+  const handleToggleErrorPanel = useCallback(() => {
+    setShowErrorPanel(prev => !prev)
+  }, [])
+
+  const handleClearErrors = useCallback(() => {
+    setErrors([])
+  }, [])
+
+  const formatTime = useCallback((seconds) => {
     if (seconds < 60) return `${seconds.toFixed(1)}s`
     const mins = Math.floor(seconds / 60)
     const secs = (seconds % 60).toFixed(0)
     return `${mins}m ${secs}s`
-  }
+  }, [])
 
-  const getElapsedTime = () => {
+  const getElapsedTime = useCallback(() => {
     if (!raceStartTime) return '0s'
     const elapsed = (Date.now() - raceStartTime) / 1000
     return formatTime(elapsed)
-  }
+  }, [raceStartTime, formatTime])
 
   return (
     <div className="RaceDashboard" role="main" aria-label="Race Dashboard">
@@ -490,8 +498,8 @@ function RaceDashboard({ socket }) {
 
       {sortedRacers.length > 0 && (
         <div className="error-panel-toggle">
-          <button 
-            onClick={() => setShowErrorPanel(!showErrorPanel)}
+          <button
+            onClick={handleToggleErrorPanel}
             className="toggle-errors-button"
           >
             {showErrorPanel ? '▼' : '▶'} Errors ({errors.length})
@@ -504,8 +512,8 @@ function RaceDashboard({ socket }) {
           <div className="error-panel-header">
             <h3>Simulation Errors</h3>
             <div className="error-panel-actions">
-              <button 
-                onClick={() => setErrors([])}
+              <button
+                onClick={handleClearErrors}
                 className="clear-errors-button"
               >
                 Clear
