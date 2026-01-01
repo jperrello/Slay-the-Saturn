@@ -238,23 +238,29 @@ function RaceDashboard({ socket }) {
   }
 
   return (
-    <div className="RaceDashboard">
+    <div className="RaceDashboard" role="main" aria-label="Race Dashboard">
       <div className="dashboard-header">
         <h2>Race Dashboard</h2>
         <div className="header-info">
-          <div className="race-status">
-            Status: <span className={`status-${raceStatus}`}>{raceStatus.toUpperCase()}</span>
+          <div className="race-status" role="status" aria-live="polite">
+            <span className="status-label">Status:</span>
+            <span className={`status-badge status-${raceStatus}`}>
+              <span className="status-icon" aria-hidden="true">
+                {raceStatus === 'idle' ? '○' : raceStatus === 'running' ? '●' : '✓'}
+              </span>
+              {raceStatus.toUpperCase()}
+            </span>
           </div>
           {raceStatus === 'running' && (
-            <div className="race-timer">
-              Elapsed: {getElapsedTime()}
+            <div className="race-timer" role="timer" aria-label={`Elapsed time: ${getElapsedTime()}`}>
+              <span aria-hidden="true">⏱</span> Elapsed: {getElapsedTime()}
             </div>
           )}
         </div>
       </div>
 
       {sortedRacers.length > 0 ? (
-        <div className="leaderboard-container">
+        <div className="leaderboard-container" role="list" aria-label="Race leaderboard">
           {sortedRacers.map((racer, index) => {
             const botColor = getBotColor(racer.name)
             const progressPercent = (racer.simulations_complete / totalSimsPerBot) * 100
@@ -273,6 +279,8 @@ function RaceDashboard({ socket }) {
             return (
               <div
                 key={racer.name}
+                role="listitem"
+                aria-label={`${racer.name}: Rank ${index + 1}, ${racer.wins} wins, ${racer.losses} losses`}
                 className={`leaderboard-row ${justFlashed[racer.name] === 'win' ? 'flash-win' : justFlashed[racer.name] === 'loss' ? 'flash-loss' : ''} ${isMovingUp ? 'rank-up' : ''} ${isMovingDown ? 'rank-down' : ''}`}
                 style={{
                   '--agent-color': botColor,
@@ -282,10 +290,14 @@ function RaceDashboard({ socket }) {
                 }}
               >
                 {/* Rank Badge */}
-                <div className="rank-badge">
-                  <span className="rank-text">{rankBadge}</span>
+                <div className="rank-badge" aria-label={`Rank ${index + 1}`}>
+                  <span className="rank-text" aria-hidden="true">{rankBadge}</span>
                   {rankChange && (
-                    <span className={`rank-change-indicator ${rankChange.direction}`}>
+                    <span
+                      className={`rank-change-indicator ${rankChange.direction}`}
+                      role="status"
+                      aria-label={`Moved ${rankChange.direction} ${Math.abs(rankChange.delta)} position${Math.abs(rankChange.delta) > 1 ? 's' : ''}`}
+                    >
                       {isMovingUp ? '▲' : '▼'} {Math.abs(rankChange.delta)}
                     </span>
                   )}
@@ -298,8 +310,8 @@ function RaceDashboard({ socket }) {
                       {racer.name}
                     </span>
                     {racer.errors > 0 && (
-                      <span className="agent-status-badge error">
-                        {racer.errors} errors
+                      <span className="agent-status-badge error" role="alert">
+                        <span aria-hidden="true">⚠</span> {racer.errors} errors
                       </span>
                     )}
                   </div>
@@ -310,7 +322,14 @@ function RaceDashboard({ socket }) {
                       <span className="progress-label">Progress</span>
                       <span className="progress-value">{racer.simulations_complete}/{totalSimsPerBot}</span>
                     </div>
-                    <div className="progress-bar-container">
+                    <div
+                      className="progress-bar-container"
+                      role="progressbar"
+                      aria-valuenow={Math.round(progressPercent)}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`Simulation progress: ${racer.simulations_complete} of ${totalSimsPerBot} complete`}
+                    >
                       <div 
                         className="progress-bar-fill"
                         style={{ 

@@ -272,20 +272,24 @@ function ConfigPage({ onStartRace }) {
 
       <div className="config-form">
         {/* Scenario Selection */}
-        <div className="form-section">
-          <label className="section-label">Scenario</label>
-          <div className="scenario-grid">
+        <div className="form-section" role="group" aria-labelledby="scenario-label">
+          <label id="scenario-label" className="section-label">Scenario</label>
+          <div className="scenario-grid" role="radiogroup" aria-label="Select game scenario">
             {Object.keys(SCENARIO_DESCRIPTIONS).map(key => {
               const scenarioNum = parseInt(key)
+              const isSelected = formData.scenario === scenarioNum
               return (
                 <button
                   key={scenarioNum}
                   type="button"
-                  className={`scenario-button ${formData.scenario === scenarioNum ? 'active' : ''}`}
+                  role="radio"
+                  aria-checked={isSelected}
+                  className={`scenario-button ${isSelected ? 'active' : ''}`}
                   onClick={() => handleScenarioChange(scenarioNum)}
                   title={SCENARIO_DESCRIPTIONS[scenarioNum]}
+                  aria-label={`Scenario ${scenarioNum}: ${SCENARIO_DESCRIPTIONS[scenarioNum]}`}
                 >
-                  <span className="scenario-number">{scenarioNum}</span>
+                  <span className="scenario-number" aria-hidden="true">{scenarioNum}</span>
                   <span className="scenario-name">
                     {SCENARIO_DESCRIPTIONS[scenarioNum].split(':')[0]}
                   </span>
@@ -310,35 +314,36 @@ function ConfigPage({ onStartRace }) {
             value={formData.enemies}
             onChange={handleEnemiesChange}
             placeholder="e.g., h, ghl, j"
+            aria-describedby="enemies-help"
           />
-          <div className="enemies-help">
+          <div id="enemies-help" className="enemies-help">
             h=HobGoblin • g=Goblin • l=Leech • j=JawWorm • s=SimpleEnemy • b=Bomber
           </div>
         </div>
 
         {/* Bot Selection */}
-        <div className="form-section">
-          <label className="section-label">
+        <div className="form-section" role="group" aria-labelledby="bot-selection-label">
+          <label id="bot-selection-label" className="section-label">
             Bot Selection ({formData.bot_names.length} selected)
           </label>
-          
+
           {/* Selected Bots */}
-          <div className="selected-bots">
+          <div className="selected-bots" role="list" aria-label="Selected bots">
             {formData.bot_names.map(botName => (
-              <div key={botName} className="selected-bot-chip">
+              <div key={botName} className="selected-bot-chip" role="listitem">
                 {botName}
                 <button
                   type="button"
                   className="remove-bot"
                   onClick={() => handleRemoveBot(botName)}
-                  aria-label={`Remove ${botName}`}
+                  aria-label={`Remove ${botName} from selection`}
                 >
-                  ×
+                  <span aria-hidden="true">×</span>
                 </button>
               </div>
             ))}
             {formData.bot_names.length === 0 && (
-              <div className="no-bots-selected">No bots selected</div>
+              <div className="no-bots-selected" role="listitem">No bots selected</div>
             )}
           </div>
 
@@ -351,9 +356,12 @@ function ConfigPage({ onStartRace }) {
               value={botSearchQuery}
               onChange={(e) => setBotSearchQuery(e.target.value)}
               onFocus={() => setShowBotDropdown(true)}
+              aria-label="Search for bots to add"
+              aria-expanded={showBotDropdown}
+              aria-controls="bot-dropdown-list"
             />
             {showBotDropdown && (
-              <div className="bot-dropdown">
+              <div className="bot-dropdown" id="bot-dropdown-list" role="listbox" aria-label="Available bots">
                 <div className="bot-dropdown-header">
                   <span>Available Bots</span>
                   <button
@@ -363,33 +371,46 @@ function ConfigPage({ onStartRace }) {
                       setShowBotDropdown(false)
                       setBotSearchQuery('')
                     }}
+                    aria-label="Close bot dropdown"
                   >
-                    ×
+                    <span aria-hidden="true">×</span>
                   </button>
                 </div>
                 <div className="bot-dropdown-content">
                   {Object.keys(groupedBots).map(category => (
-                    <div key={category} className="bot-category">
-                      <div className="bot-category-header">{category}</div>
-                      {groupedBots[category].map(bot => (
-                        <div
-                          key={bot.name}
-                          className={`bot-option ${formData.bot_names.includes(bot.name) ? 'selected' : ''}`}
-                          onClick={() => handleBotToggle(bot.name)}
-                        >
-                          <div className="bot-option-checkbox">
-                            {formData.bot_names.includes(bot.name) && '✓'}
+                    <div key={category} className="bot-category" role="group" aria-label={category}>
+                      <div className="bot-category-header" role="presentation">{category}</div>
+                      {groupedBots[category].map(bot => {
+                        const isSelected = formData.bot_names.includes(bot.name)
+                        return (
+                          <div
+                            key={bot.name}
+                            role="option"
+                            aria-selected={isSelected}
+                            className={`bot-option ${isSelected ? 'selected' : ''}`}
+                            onClick={() => handleBotToggle(bot.name)}
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                handleBotToggle(bot.name)
+                              }
+                            }}
+                          >
+                            <div className="bot-option-checkbox" aria-hidden="true">
+                              {isSelected ? '✓' : ''}
+                            </div>
+                            <div className="bot-option-info">
+                              <div className="bot-option-name">{bot.name}</div>
+                              <div className="bot-option-description">{bot.description}</div>
+                            </div>
                           </div>
-                          <div className="bot-option-info">
-                            <div className="bot-option-name">{bot.name}</div>
-                            <div className="bot-option-description">{bot.description}</div>
-                          </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   ))}
                   {Object.keys(groupedBots).length === 0 && (
-                    <div className="no-results">No bots found</div>
+                    <div className="no-results" role="status">No bots found</div>
                   )}
                 </div>
               </div>
@@ -400,7 +421,7 @@ function ConfigPage({ onStartRace }) {
         {/* Test Count Slider */}
         <div className="form-section">
           <label className="section-label" htmlFor="test-count-slider">
-            Test Count: {formData.test_count}
+            Test Count: <span className="value-display">{formData.test_count}</span>
           </label>
           <div className="slider-container">
             <input
@@ -411,8 +432,12 @@ function ConfigPage({ onStartRace }) {
               value={formData.test_count}
               onChange={handleTestCountChange}
               className="slider"
+              aria-valuemin={1}
+              aria-valuemax={100}
+              aria-valuenow={formData.test_count}
+              aria-valuetext={`${formData.test_count} simulations per bot`}
             />
-            <div className="slider-labels">
+            <div className="slider-labels" aria-hidden="true">
               <span>1</span>
               <span>50</span>
               <span>100</span>
@@ -423,7 +448,7 @@ function ConfigPage({ onStartRace }) {
         {/* Thread Count Slider */}
         <div className="form-section">
           <label className="section-label" htmlFor="thread-count-slider">
-            Thread Count: {formData.thread_count}
+            Thread Count: <span className="value-display">{formData.thread_count}</span>
           </label>
           <div className="slider-container">
             <input
@@ -434,8 +459,12 @@ function ConfigPage({ onStartRace }) {
               value={formData.thread_count}
               onChange={handleThreadCountChange}
               className="slider"
+              aria-valuemin={1}
+              aria-valuemax={16}
+              aria-valuenow={formData.thread_count}
+              aria-valuetext={`${formData.thread_count} parallel threads`}
             />
-            <div className="slider-labels">
+            <div className="slider-labels" aria-hidden="true">
               <span>1</span>
               <span>8</span>
               <span>16</span>
@@ -449,11 +478,13 @@ function ConfigPage({ onStartRace }) {
           className="start-race-button"
           onClick={handleStartRace}
           disabled={isLoading || validateFormData().length > 0}
+          aria-busy={isLoading}
+          aria-disabled={isLoading || validateFormData().length > 0}
         >
           {isLoading ? (
             <>
-              <span className="spinner"></span>
-              Starting Race...
+              <span className="spinner" aria-hidden="true"></span>
+              <span role="status">Starting Race...</span>
             </>
           ) : (
             'Start Race'
