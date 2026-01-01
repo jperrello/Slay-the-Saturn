@@ -6,6 +6,61 @@ const STORAGE_KEYS = {
   SAVED_CONFIGS: 'race-configs-saved'
 }
 
+const PRESET_CONFIGS = [
+  {
+    id: 'quick',
+    name: 'Quick Test',
+    icon: '⚡',
+    description: 'Fast test with basic bots',
+    config: {
+      scenario: 0,
+      enemies: 'h',
+      bot_names: ['mcts', 'rndm'],
+      test_count: 10,
+      thread_count: 2
+    }
+  },
+  {
+    id: 'full',
+    name: 'Full Suite',
+    icon: '🎯',
+    description: 'Comprehensive comparison',
+    config: {
+      scenario: 0,
+      enemies: 'h',
+      bot_names: ['mcts', 'bt3', 'rcot-gpt41', 'cot-claude', 'none-gemini', 'rndm'],
+      test_count: 50,
+      thread_count: 4
+    }
+  },
+  {
+    id: 'llm',
+    name: 'LLM Comparison',
+    icon: '🤖',
+    description: 'Compare LLM agents only',
+    config: {
+      scenario: 0,
+      enemies: 'h',
+      bot_names: ['rcot-gpt41', 'cot-claude', 'none-gemini'],
+      test_count: 25,
+      thread_count: 4
+    }
+  },
+  {
+    id: 'gigl',
+    name: 'GIGL Test',
+    icon: '🎲',
+    description: 'Random deck with GIGL cards',
+    config: {
+      scenario: 5,
+      enemies: 'h',
+      bot_names: ['rcot-gpt41', 'mcts', 'bt5', 'rndm'],
+      test_count: 20,
+      thread_count: 2
+    }
+  }
+]
+
 const SCENARIO_DESCRIPTIONS = {
   0: 'Starter Ironclad: 5 Strikes, 4 Defends, 1 Bash',
   1: 'Basics Batter Stimulate: 5 Strikes, 4 Defends, Batter, Stimulate',
@@ -174,6 +229,12 @@ function ConfigPage({ onStartRace }) {
     setSavedConfigs(updatedConfigs)
     localStorage.setItem(STORAGE_KEYS.SAVED_CONFIGS, JSON.stringify(updatedConfigs))
   }, [savedConfigs])
+
+  const handleLoadPreset = useCallback((preset) => {
+    setFormData(preset.config)
+    setTouched({ enemies: false, bot_names: false })
+    setFieldErrors({ enemies: null, bot_names: null, test_count: null, thread_count: null })
+  }, [])
 
   const validateEnemies = (value) => {
     if (!value || value.trim() === '') {
@@ -458,6 +519,31 @@ function ConfigPage({ onStartRace }) {
           )}
         </div>
       )}
+
+      {/* Preset Configurations */}
+      <div className="preset-configs-section">
+        <div className="preset-header">
+          <span className="preset-icon" aria-hidden="true">🚀</span>
+          <span className="preset-title">Quick Start Presets</span>
+        </div>
+        <div className="preset-buttons">
+          {PRESET_CONFIGS.map(preset => (
+            <button
+              key={preset.id}
+              type="button"
+              className="preset-button"
+              onClick={() => handleLoadPreset(preset)}
+              title={preset.description}
+            >
+              <span className="preset-button-icon" aria-hidden="true">{preset.icon}</span>
+              <div className="preset-button-content">
+                <span className="preset-button-name">{preset.name}</span>
+                <span className="preset-button-desc">{preset.description}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Save Config Dialog */}
       {showSaveDialog && (
