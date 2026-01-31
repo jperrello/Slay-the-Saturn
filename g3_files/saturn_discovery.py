@@ -1,8 +1,8 @@
 """
 Saturn mDNS Service Discovery Module
 
-Provides one-time discovery of Saturn OpenRouter proxy servers using DNS-SD.
-Adapted from saturn_files/simple_chat_client.py for use in LLM agents.
+Uses Saturn v2.0 library for cross-platform mDNS discovery.
+Falls back to subprocess-based dns-sd discovery if Saturn package not installed.
 
 Usage:
     from g3_files.saturn_discovery import get_saturn_server
@@ -31,18 +31,27 @@ import socket
 import time
 import re
 from typing import Optional, List
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
+
+try:
+    from saturn import discover_services
+    SATURN_AVAILABLE = True
+except ImportError:
+    SATURN_AVAILABLE = False
 
 
 @dataclass
 class SaturnService:
-    """Represents a discovered Saturn service"""
+    """Represents a discovered Saturn service (backward compatible)"""
     name: str
     url: str
     priority: int
     ip: str
     last_seen: datetime
+    ephemeral_key: Optional[str] = None
+    capabilities: List[str] = field(default_factory=list)
+    models: List[str] = field(default_factory=list)
 
 
 def get_saturn_server(preferred_name: Optional[str] = None, verbose: bool = False) -> Optional[str]:
@@ -56,32 +65,14 @@ def get_saturn_server(preferred_name: Optional[str] = None, verbose: bool = Fals
     Returns:
         Server URL (e.g., "http://192.168.1.100:8080") or None if no servers found
     """
-    servers = get_all_saturn_servers()
-
-    if not servers:
-        return None
-
-    if verbose and len(servers) > 1:
-        print(f"[Saturn Discovery] Found {len(servers)} servers:")
-        for srv in servers:
-            print(f"  - {srv.name}: {srv.url} (priority={srv.priority})")
-
-    # If preferred name specified, find that server
-    if preferred_name:
-        for server in servers:
-            if server.name == preferred_name:
-                if verbose:
-                    print(f"[Saturn Discovery] Using preferred server: {server.name}")
-                return server.url
-        # Preferred server not found, fall through to default behavior
+    if SATURN_AVAILABLE:
+        result = _saturn_v2_get_server(preferred_name, verbose)
+        if result is not None:
+            return result
         if verbose:
-            print(f"[Saturn Discovery] Preferred server '{preferred_name}' not found, using best priority")
+            print("[Saturn] v2.0 discovery returned no servers, trying legacy...")
 
-    # Return server with lowest priority (highest preference)
-    best_server = min(servers, key=lambda s: s.priority)
-    if verbose and len(servers) > 1:
-        print(f"[Saturn Discovery] Selected: {best_server.name} (priority={best_server.priority})")
-    return best_server.url
+    return _legacy_get_saturn_server(preferred_name, verbose)
 
 
 def get_all_saturn_servers() -> List[SaturnService]:
@@ -91,12 +82,105 @@ def get_all_saturn_servers() -> List[SaturnService]:
     Returns:
         List of SaturnService objects sorted by priority (lowest first)
     """
+    if SATURN_AVAILABLE:
+        try:
+            servers = _saturn_v2_get_all_servers()
+            if servers:
+                return servers
+        except Exception:
+            pass
+
+    return _legacy_get_all_saturn_servers()
+
+
+def _saturn_v2_get_server(preferred_name: Optional[str], verbose: bool) -> Optional[str]:
+    """Use Saturn v2.0 library for discovery."""
+    try:
+        services = discover_services(timeout=5.0, settle_time=0.5)
+
+        if not services:
+            return None
+
+        if verbose and len(services) > 1:
+            print(f"[Saturn v2.0] Found {len(services)} servers:")
+            for svc in services:
+                print(f"  - {svc.name}: http://{svc.host}:{svc.port} (priority={svc.priority})")
+
+        if preferred_name:
+            for svc in services:
+                if svc.name == preferred_name:
+                    if verbose:
+                        print(f"[Saturn v2.0] Using preferred server: {svc.name}")
+                    return f"http://{svc.host}:{svc.port}"
+            if verbose:
+                print(f"[Saturn v2.0] Preferred server '{preferred_name}' not found, using best priority")
+
+        best = services[0]
+        if verbose and len(services) > 1:
+            print(f"[Saturn v2.0] Selected: {best.name} (priority={best.priority})")
+
+        return f"http://{best.host}:{best.port}"
+
+    except Exception as e:
+        if verbose:
+            print(f"[Saturn v2.0] Discovery error: {e}")
+        return None
+
+
+def _saturn_v2_get_all_servers() -> List[SaturnService]:
+    """Use Saturn v2.0 library to get all servers."""
+    services = discover_services(timeout=5.0, settle_time=0.5)
+    current_time = datetime.now()
+
+    return [
+        SaturnService(
+            name=svc.name,
+            url=f"http://{svc.host}:{svc.port}",
+            priority=svc.priority,
+            ip=svc.host,
+            last_seen=current_time,
+            ephemeral_key=getattr(svc, 'ephemeral_key', None),
+            capabilities=list(getattr(svc, 'capabilities', [])) if hasattr(svc, 'capabilities') else [],
+            models=list(getattr(svc, 'models', [])) if hasattr(svc, 'models') else [],
+        )
+        for svc in services
+    ]
+
+
+def _legacy_get_saturn_server(preferred_name: Optional[str], verbose: bool) -> Optional[str]:
+    """Original subprocess-based discovery (fallback)."""
+    servers = _legacy_get_all_saturn_servers()
+
+    if not servers:
+        return None
+
+    if verbose and len(servers) > 1:
+        print(f"[Saturn Legacy] Found {len(servers)} servers:")
+        for srv in servers:
+            print(f"  - {srv.name}: {srv.url} (priority={srv.priority})")
+
+    if preferred_name:
+        for server in servers:
+            if server.name == preferred_name:
+                if verbose:
+                    print(f"[Saturn Legacy] Using preferred server: {server.name}")
+                return server.url
+        if verbose:
+            print(f"[Saturn Legacy] Preferred server '{preferred_name}' not found, using best priority")
+
+    best_server = min(servers, key=lambda s: s.priority)
+    if verbose and len(servers) > 1:
+        print(f"[Saturn Legacy] Selected: {best_server.name} (priority={best_server.priority})")
+    return best_server.url
+
+
+def _legacy_get_all_saturn_servers() -> List[SaturnService]:
+    """Original subprocess-based discovery (fallback)."""
     services = _run_dns_sd_discovery()
 
     if not services:
         return []
 
-    # Convert to SaturnService objects
     current_time = datetime.now()
     saturn_services = [
         SaturnService(
@@ -109,7 +193,6 @@ def get_all_saturn_servers() -> List[SaturnService]:
         for svc in services
     ]
 
-    # Sort by priority (lowest first)
     return sorted(saturn_services, key=lambda s: s.priority)
 
 
@@ -123,7 +206,6 @@ def _run_dns_sd_discovery() -> List[dict]:
     services = []
 
     try:
-        # Browse for services (2 second timeout)
         browse_proc = subprocess.Popen(
             ['dns-sd', '-B', '_saturn._tcp', 'local'],
             stdout=subprocess.PIPE,
@@ -140,7 +222,6 @@ def _run_dns_sd_discovery() -> List[dict]:
             browse_proc.kill()
             stdout, stderr = browse_proc.communicate()
 
-        # Parse service names from browse output
         service_names = []
         for line in stdout.split('\n'):
             if 'Add' in line and '_saturn._tcp' in line:
@@ -148,7 +229,6 @@ def _run_dns_sd_discovery() -> List[dict]:
                 if len(parts) > 6:
                     service_names.append(parts[6])
 
-        # Get details for each service
         for service_name in service_names:
             try:
                 lookup_proc = subprocess.Popen(
@@ -169,9 +249,8 @@ def _run_dns_sd_discovery() -> List[dict]:
 
                 hostname = None
                 port = None
-                priority = 50  # Default priority
+                priority = 50
 
-                # Parse lookup output
                 for line in stdout.split('\n'):
                     if 'can be reached at' in line:
                         match = re.search(r'can be reached at (.+):(\d+)', line)
@@ -203,19 +282,13 @@ def _run_dns_sd_discovery() -> List[dict]:
                 continue
 
     except FileNotFoundError:
-        # dns-sd not available (Bonjour not installed)
         return []
     except Exception:
         return []
 
-    # Deduplicate by URL (same host:port), preferring non-loopback IPs and lower priority
-    # This allows multiple Saturn servers on different ports while removing duplicates
-    # from multiple network interfaces
     unique_services = {}
     for svc in services:
-        # Use URL as key to distinguish servers on different ports
-        # Extract port from URL for consistent keying
-        url_key = svc['url']  # e.g., "http://192.168.1.100:8080"
+        url_key = svc['url']
         ip = svc['ip']
         is_loopback = ip.startswith('127.') or ip == 'localhost'
 
@@ -225,8 +298,6 @@ def _run_dns_sd_discovery() -> List[dict]:
             existing = unique_services[url_key]
             existing_is_loopback = existing['ip'].startswith('127.') or existing['ip'] == 'localhost'
 
-            # Replace if: better priority, OR same priority but prefer non-loopback
-            # Note: Lower priority value = higher preference
             if (svc['priority'] < existing['priority']) or \
                (svc['priority'] == existing['priority'] and existing_is_loopback and not is_loopback):
                 unique_services[url_key] = svc
@@ -235,10 +306,15 @@ def _run_dns_sd_discovery() -> List[dict]:
 
 
 if __name__ == "__main__":
-    """Test the discovery module"""
     print("=" * 60)
     print("Saturn mDNS Discovery Test")
     print("=" * 60)
+
+    if SATURN_AVAILABLE:
+        print("\n[INFO] Saturn v2.0 package is installed")
+    else:
+        print("\n[INFO] Saturn v2.0 package NOT installed, using legacy dns-sd")
+
     print("\nSearching for Saturn servers...")
     servers = get_all_saturn_servers()
 
@@ -246,7 +322,8 @@ if __name__ == "__main__":
         print("\n[FAIL] No Saturn servers found.")
         print("\nMake sure:")
         print("  1. A Saturn server is running (python saturn_files/openrouter_server.py)")
-        print("  2. dns-sd is available (install Bonjour on Windows)")
+        if not SATURN_AVAILABLE:
+            print("  2. dns-sd is available (install Bonjour on Windows)")
         print("  3. You're on the same network as the server")
     else:
         print(f"\n[SUCCESS] Found {len(servers)} Saturn server(s):")
@@ -256,6 +333,12 @@ if __name__ == "__main__":
             print(f"  URL:      {svc.url}")
             print(f"  Priority: {svc.priority} (lower = higher preference)")
             print(f"  IP:       {svc.ip}")
+            if svc.ephemeral_key:
+                print(f"  Key:      {svc.ephemeral_key[:20]}...")
+            if svc.capabilities:
+                print(f"  Caps:     {', '.join(svc.capabilities)}")
+            if svc.models:
+                print(f"  Models:   {', '.join(svc.models)}")
             print()
 
         print("-" * 60)
