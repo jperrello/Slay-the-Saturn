@@ -1,3 +1,4 @@
+import asyncio
 import threading
 import time
 from datetime import datetime
@@ -131,6 +132,10 @@ class RaceManager:
         self.sio = sio
         self.current_race: Optional[RaceState] = None
         self.lock = threading.Lock()
+        self._main_loop: Optional[asyncio.AbstractEventLoop] = None
+
+    def set_event_loop(self, loop: asyncio.AbstractEventLoop):
+        self._main_loop = loop
 
     def start_race(self, scenario_name: str, enemies_str: str, bot_names: List[str],
                    test_count: int, thread_count: int):
@@ -224,14 +229,19 @@ class RaceManager:
             }
 
     def _emit_sync(self, event: str, data: Any):
-        import asyncio
+        if self._main_loop is None:
+            print(f"[RaceManager] Warning: No event loop set, cannot emit {event}")
+            return
+
+        if not self._main_loop.is_running():
+            print(f"[RaceManager] Warning: Event loop not running, cannot emit {event}")
+            return
+
+        future = asyncio.run_coroutine_threadsafe(
+            self.sio.emit(event, data),
+            self._main_loop
+        )
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                asyncio.create_task(self.sio.emit(event, data))
-            else:
-                loop.run_until_complete(self.sio.emit(event, data))
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(self.sio.emit(event, data))
+            future.result(timeout=5.0)
+        except Exception as e:
+            print(f"[RaceManager] Error emitting {event}: {e}")

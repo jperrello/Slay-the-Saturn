@@ -1,6 +1,6 @@
 import sys
-import sys
 import os
+import asyncio
 from pathlib import Path
 import csv
 import io
@@ -54,6 +54,12 @@ race_manager = RaceManager(sio)
 
 static_dir = Path(__file__).parent.parent / 'static'
 
+@app.on_event("startup")
+async def startup_event():
+    loop = asyncio.get_running_loop()
+    race_manager.set_event_loop(loop)
+    print(f"[Startup] Event loop captured for RaceManager")
+
 class RaceConfig(BaseModel):
     scenario: int
     enemies: str
@@ -82,6 +88,10 @@ async def reset_race():
 
 @app.post('/api/race/start')
 async def start_race(config: RaceConfig):
+    if race_manager._main_loop is None:
+        race_manager.set_event_loop(asyncio.get_running_loop())
+        print('[StartRace] Event loop captured for RaceManager')
+
     if race_manager.current_race and not race_manager.current_race.is_finished:
         raise HTTPException(status_code=400, detail="Race already in progress")
 
@@ -155,6 +165,12 @@ async def serve_frontend(full_path: str):
 @sio.event
 async def connect(sid, environ):
     print(f'Client connected: {sid}')
+
+    if race_manager._main_loop is None:
+        loop = asyncio.get_running_loop()
+        race_manager.set_event_loop(loop)
+        print(f'[Connect] Event loop captured for RaceManager')
+
     await sio.emit('connection_established', {'sid': sid}, room=sid)
 
     status = race_manager.get_current_status()
